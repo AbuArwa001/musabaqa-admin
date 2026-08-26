@@ -29,8 +29,11 @@ export default async function DashboardLayout({
   return (
     <div className={`flex min-h-screen ${isAr ? 'flex-row-reverse' : ''}`}>
       <Sidebar locale={locale} dict={dict} role={claims.role} userName={claims.name} />
-      <main className={`flex-1 ${isAr ? 'mr-60' : 'ml-60'} min-h-screen`}>
-        <div className="max-w-7xl mx-auto px-6 py-8">
+      <main
+        className={`flex-1 min-h-screen ${isAr ? 'mr-72' : 'ml-72'}`}
+        style={{ background: 'transparent' }}
+      >
+        <div className="max-w-7xl mx-auto px-8 py-10">
           {children}
         </div>
       </main>

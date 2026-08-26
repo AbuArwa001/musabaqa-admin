@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react'
 import type { Dict } from '@/lib/dictionaries'
 
 const schema = z.object({
@@ -19,6 +20,7 @@ export default function LoginClient({ dict, locale }: { dict: Dict; locale: stri
   const isAr = locale === 'ar'
   const router = useRouter()
   const [serverErr, setServerErr] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({ resolver: zodResolver(schema) })
 
   async function onSubmit(data: Form) {
@@ -41,61 +43,174 @@ export default function LoginClient({ dict, locale }: { dict: Dict; locale: stri
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-16">
-      {/* Background decorations */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-amber-900/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center px-4 py-16" style={{ direction: isAr ? 'rtl' : 'ltr' }}>
 
-      <div className="w-full max-w-md relative">
-        {/* Logo area */}
-        <div className={`text-center mb-10 ${isAr ? 'rtl' : ''}`}>
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-600/30 to-amber-800/20 border border-amber-500/30 shadow-[0_0_30px_rgba(201,147,53,0.2)] mb-5">
-            <span className="text-3xl">🕌</span>
+      {/* Floating geometric particles */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
+        {[...Array(6)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: `${[80,120,60,100,70,90][i]}px`,
+              height: `${[80,120,60,100,70,90][i]}px`,
+              left: `${[10,70,30,80,15,55][i]}%`,
+              top:  `${[20,60,80,15,45,70][i]}%`,
+              background: i % 2 === 0
+                ? 'radial-gradient(circle, rgba(240,192,96,0.08) 0%, transparent 70%)'
+                : 'radial-gradient(circle, rgba(0,216,138,0.06) 0%, transparent 70%)',
+              filter: 'blur(20px)',
+              animation: `float ${6 + i * 1.5}s ease-in-out infinite`,
+              animationDelay: `${i * 0.8}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Card */}
+      <div className="w-full max-w-md relative" style={{ zIndex: 2 }}>
+
+        {/* Logo / Hero area */}
+        <div className="text-center mb-8 animate-fade-slide-up">
+          {/* Icon */}
+          <div className="relative inline-block mb-6">
+            {/* Outer glow rings */}
+            <div
+              className="absolute inset-0 rounded-3xl"
+              style={{
+                background: 'radial-gradient(circle, rgba(240,192,96,0.3) 0%, transparent 70%)',
+                filter: 'blur(16px)',
+                transform: 'scale(1.6)',
+                animation: 'pulse-glow 3s ease-in-out infinite',
+              }}
+            />
+            <div
+              className="relative w-20 h-20 rounded-3xl flex items-center justify-center mx-auto"
+              style={{
+                background: 'linear-gradient(135deg, rgba(240,192,96,0.2) 0%, rgba(240,192,96,0.05) 100%)',
+                border: '1px solid rgba(240,192,96,0.35)',
+                boxShadow: '0 0 40px rgba(240,192,96,0.2), inset 0 1px 0 rgba(240,192,96,0.3)',
+              }}
+            >
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L14.5 7H19L15.5 10.5L17 15.5L12 12.5L7 15.5L8.5 10.5L5 7H9.5L12 2Z" fill="#f0c060" opacity="0.95"/>
+                <path d="M12 6L13.5 9H16.5L14 11L15 14L12 12.5L9 14L10 11L7.5 9H10.5L12 6Z" fill="#fde68a" opacity="0.7"/>
+                <circle cx="12" cy="19" r="2" fill="#f0c060" opacity="0.6"/>
+                <path d="M4 19 Q12 16 20 19" stroke="#f0c060" strokeWidth="0.8" strokeOpacity="0.4" fill="none"/>
+              </svg>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500">
+
+          <h1
+            className="text-4xl font-bold mb-2"
+            style={{
+              background: 'linear-gradient(135deg, #f0c060 0%, #fde68a 50%, #e8a83a 100%)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '-0.02em',
+            }}
+          >
             {t.title}
           </h1>
-          <p className="text-stone-400 mt-2 text-sm">{t.subtitle}</p>
+          <p className="text-sm" style={{ color: 'rgba(160,160,192,0.7)' }}>
+            {t.subtitle}
+          </p>
         </div>
 
-        {/* Card */}
-        <div className="glass p-8 shadow-[0_25px_60px_rgba(0,0,0,0.4)]">
+        {/* Login Card */}
+        <div
+          className="shimmer-card p-8 animate-fade-slide-up"
+          style={{ animationDelay: '0.1s', boxShadow: '0 32px 80px rgba(0,0,0,0.5)' }}
+        >
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+
+            {/* Email field */}
             <div>
               <label className="label">{t.email}</label>
-              <input
-                {...register('email')}
-                type="email"
-                className="input-field"
-                dir="ltr"
-                autoComplete="username"
-                autoFocus
-              />
+              <div className="relative">
+                <Mail
+                  size={16}
+                  className="absolute top-1/2 -translate-y-1/2"
+                  style={{ left: '14px', color: 'rgba(160,160,192,0.5)', pointerEvents: 'none' }}
+                />
+                <input
+                  {...register('email')}
+                  type="email"
+                  className="input-field"
+                  style={{ paddingLeft: '2.5rem' }}
+                  dir="ltr"
+                  autoComplete="username"
+                  autoFocus
+                />
+              </div>
               {errors.email && <p className="error-text">Valid email required</p>}
             </div>
 
+            {/* Password field */}
             <div>
               <label className="label">{t.password}</label>
-              <input
-                {...register('password')}
-                type="password"
-                className="input-field"
-                dir="ltr"
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <Lock
+                  size={16}
+                  className="absolute top-1/2 -translate-y-1/2"
+                  style={{ left: '14px', color: 'rgba(160,160,192,0.5)', pointerEvents: 'none' }}
+                />
+                <input
+                  {...register('password')}
+                  type={showPw ? 'text' : 'password'}
+                  className="input-field"
+                  style={{ paddingLeft: '2.5rem', paddingRight: '2.75rem' }}
+                  dir="ltr"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(v => !v)}
+                  className="absolute top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors"
+                  style={{ right: '10px', color: 'rgba(160,160,192,0.5)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                  tabIndex={-1}
+                >
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
               {errors.password && <p className="error-text">Password required</p>}
             </div>
 
+            {/* Server error */}
             {serverErr && (
-              <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm">
-                {serverErr}
+              <div
+                className="rounded-xl p-4 flex items-start gap-3 text-sm"
+                style={{
+                  background: 'rgba(245,107,126,0.08)',
+                  border: '1px solid rgba(245,107,126,0.25)',
+                  color: '#f56b7e',
+                }}
+              >
+                <span className="text-base leading-none mt-0.5">⚠</span>
+                <span>{serverErr}</span>
               </div>
             )}
 
-            <button type="submit" disabled={isSubmitting} className="btn-primary w-full mt-2 py-3 text-base">
-              {isSubmitting ? t.submitting : t.submit}
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-gold w-full mt-2 py-3.5 text-base"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              {isSubmitting ? (
+                <><Loader2 size={18} className="animate-spin" /> {t.submitting}</>
+              ) : t.submit}
             </button>
           </form>
         </div>
+
+        {/* Bottom tagline */}
+        <p className="text-center text-xs mt-6 animate-fade-slide-up" style={{ color: 'rgba(160,160,192,0.4)', animationDelay: '0.2s' }}>
+          Secured admin portal · Musabaqa Competition System
+        </p>
       </div>
     </div>
   )

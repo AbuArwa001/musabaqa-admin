@@ -25,13 +25,64 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={isRtl ? 'rtl' : 'ltr'} suppressHydrationWarning>
-      <body className="min-h-screen bg-[#0d0d0f] text-stone-100 antialiased">
-        {/* Global ambient orbs */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-          <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-emerald-900/15 rounded-full blur-[120px]" />
-          <div className="absolute top-1/2 -right-60 w-[500px] h-[500px] bg-amber-900/10 rounded-full blur-[120px]" />
+      <body className="min-h-screen antialiased" style={{ background: '#07070f', color: '#f0f0ff' }}>
+
+        {/* Noise texture overlay */}
+        <div className="noise-overlay" />
+
+        {/* Animated ambient orbs */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+          {/* Gold orb – top left */}
+          <div
+            className="animate-gradient-flow"
+            style={{
+              position: 'absolute',
+              top: '-15%',
+              left: '-10%',
+              width: '55vw',
+              height: '55vw',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(240,192,96,0.08) 0%, transparent 70%)',
+              filter: 'blur(60px)',
+              animationDelay: '0s',
+            }}
+          />
+          {/* Emerald orb – center right */}
+          <div
+            className="animate-gradient-flow"
+            style={{
+              position: 'absolute',
+              top: '30%',
+              right: '-15%',
+              width: '45vw',
+              height: '45vw',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(0,216,138,0.06) 0%, transparent 70%)',
+              filter: 'blur(60px)',
+              animationDelay: '3s',
+            }}
+          />
+          {/* Purple orb – bottom center */}
+          <div
+            className="animate-gradient-flow"
+            style={{
+              position: 'absolute',
+              bottom: '-10%',
+              left: '25%',
+              width: '50vw',
+              height: '50vw',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%)',
+              filter: 'blur(80px)',
+              animationDelay: '6s',
+            }}
+          />
         </div>
-        {children}
+
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          {children}
+        </div>
+
         <Toaster richColors position={isRtl ? 'top-left' : 'top-right'} />
       </body>
     </html>
