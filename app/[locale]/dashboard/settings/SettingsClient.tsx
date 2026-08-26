@@ -155,8 +155,8 @@ export default function SettingsClient({
 
   // Active matrix regions based on scope
   const activeMatrixList = compConfig.scope === 'NATIONAL'
-    ? ['Eastleigh', 'Kiamaiko', 'Komarock', 'Kasarani', 'Nairobi', 'Nakuru', 'Mombasa', 'Garissa', 'Isiolo', 'Mandera', 'Wajir']
-    : ['Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County', 'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County']
+    ? ['Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County', 'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County', 'Kilifi County', 'Lamu County']
+    : ['Eastleigh', 'Kiamaiko', 'Komarock', 'Kasarani', 'Westlands', 'Kibra', 'South C', 'Pangani', 'Dandora', 'Kayole']
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
@@ -231,7 +231,7 @@ export default function SettingsClient({
 
             <div className="pt-4 space-y-4">
               <p className="text-xs text-gray-600">
-                Choose the structural scope of the competition. National level divides registration quotas across major regional centers (e.g. Eastleigh, Kiamaiko, Komarock, Kasarani, etc.), while County level divides quotas per county.
+                Choose the structural scope of the competition. National level divides registration quotas across Kenya counties (Nairobi, Mombasa, Nakuru, Garissa, etc.), while County level divides quotas across internal regional zones (e.g. Eastleigh, Kiamaiko, Komarock, Kasarani, etc.).
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -255,7 +255,7 @@ export default function SettingsClient({
                       <Flag size={14} className="text-emerald-700" /> National Level Competition
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Divided into national regional zones (Eastleigh, Kiamaiko, Komarock, Kasarani, Westlands, Coast, North Eastern, etc.)
+                      Divided across Kenya counties (Nairobi, Mombasa, Nakuru, Garissa, Isiolo, Wajir, Mandera, Kisumu, etc.)
                     </p>
                   </div>
                 </label>
@@ -280,7 +280,7 @@ export default function SettingsClient({
                       <LocationIcon size={14} className="text-[#c99335]" /> County Level Competition
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Divided across Kenya counties (Nairobi, Mombasa, Nakuru, Garissa, Isiolo, Wajir, Mandera)
+                      Divided into regional zones within the county (Eastleigh, Kiamaiko, Komarock, Kasarani, Westlands, Kibra, South C, etc.)
                     </p>
                   </div>
                 </label>
