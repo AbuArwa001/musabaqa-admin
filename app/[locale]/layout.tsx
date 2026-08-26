@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { Toaster } from 'sonner'
 import { isValidLocale, getDictionary } from '@/lib/dictionaries'
 import { decodeAdminToken } from '@/lib/auth'
+import '../globals.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={isRtl ? 'rtl' : 'ltr'} suppressHydrationWarning>
-      <body className="min-h-screen antialiased" style={{ background: '#07070f', color: '#f0f0ff' }}>
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
 
         {/* Noise texture overlay */}
         <div className="noise-overlay" />

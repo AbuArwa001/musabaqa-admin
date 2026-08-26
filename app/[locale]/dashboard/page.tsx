@@ -70,10 +70,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
             </div>
             <Link
               href={`/${locale}/dashboard/institutions`}
-              className="flex items-center gap-1 text-xs font-semibold transition-all duration-200"
-              style={{ color: 'rgba(240,192,96,0.7)', fontFamily: 'var(--font-display)' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#f0c060'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'rgba(240,192,96,0.7)'}
+              className="flex items-center gap-1 text-xs font-semibold transition-all duration-200 text-[#f0c060]/70 hover:text-[#f0c060]"
+              style={{ fontFamily: 'var(--font-display)' }}
             >
               View all <ArrowRight size={12} />
             </Link>
@@ -92,10 +90,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
                 {institutions.slice(0, 5).map(i => (
                   <div
                     key={i.id}
-                    className="flex items-center justify-between py-3 px-3 rounded-xl transition-all duration-150"
+                    className="flex items-center justify-between py-3 px-3 rounded-xl transition-all duration-150 hover:bg-white/[0.03]"
                     style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#f0c060', boxShadow: '0 0 6px #f0c060' }} />
@@ -129,10 +125,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
             </div>
             <Link
               href={`/${locale}/dashboard/rounds`}
-              className="flex items-center gap-1 text-xs font-semibold transition-all duration-200"
-              style={{ color: 'rgba(0,216,138,0.7)', fontFamily: 'var(--font-display)' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#00d88a'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = 'rgba(0,216,138,0.7)'}
+              className="flex items-center gap-1 text-xs font-semibold transition-all duration-200 text-[#00d88a]/70 hover:text-[#00d88a]"
+              style={{ fontFamily: 'var(--font-display)' }}
             >
               View all <ArrowRight size={12} />
             </Link>
@@ -151,10 +145,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
                 {rounds.map(r => (
                   <div
                     key={r.id}
-                    className="flex items-center justify-between py-3 px-3 rounded-xl transition-all duration-150"
+                    className="flex items-center justify-between py-3 px-3 rounded-xl transition-all duration-150 hover:bg-white/[0.03]"
                     style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: '#00d88a', boxShadow: '0 0 6px #00d88a' }} />

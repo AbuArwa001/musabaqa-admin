@@ -38,8 +38,9 @@ type StudentsClientProps = {
   token: string
 }
 
-function getInitials(name: string) {
-  return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+function getInitials(name?: string) {
+  if (!name) return '?'
+  return name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
 const avatarColors = ['#f0c060', '#00d88a', '#5b8df5', '#f56b7e', '#a78bfa', '#38bdf8']

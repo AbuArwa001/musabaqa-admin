@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -74,30 +75,10 @@ export default function LoginClient({ dict, locale }: { dict: Dict; locale: stri
         <div className="text-center mb-8 animate-fade-slide-up">
           {/* Icon */}
           <div className="relative inline-block mb-6">
-            {/* Outer glow rings */}
             <div
-              className="absolute inset-0 rounded-3xl"
-              style={{
-                background: 'radial-gradient(circle, rgba(240,192,96,0.3) 0%, transparent 70%)',
-                filter: 'blur(16px)',
-                transform: 'scale(1.6)',
-                animation: 'pulse-glow 3s ease-in-out infinite',
-              }}
-            />
-            <div
-              className="relative w-20 h-20 rounded-3xl flex items-center justify-center mx-auto"
-              style={{
-                background: 'linear-gradient(135deg, rgba(240,192,96,0.2) 0%, rgba(240,192,96,0.05) 100%)',
-                border: '1px solid rgba(240,192,96,0.35)',
-                boxShadow: '0 0 40px rgba(240,192,96,0.2), inset 0 1px 0 rgba(240,192,96,0.3)',
-              }}
+              className="relative w-24 h-24 flex items-center justify-center mx-auto"
             >
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L14.5 7H19L15.5 10.5L17 15.5L12 12.5L7 15.5L8.5 10.5L5 7H9.5L12 2Z" fill="#f0c060" opacity="0.95"/>
-                <path d="M12 6L13.5 9H16.5L14 11L15 14L12 12.5L9 14L10 11L7.5 9H10.5L12 6Z" fill="#fde68a" opacity="0.7"/>
-                <circle cx="12" cy="19" r="2" fill="#f0c060" opacity="0.6"/>
-                <path d="M4 19 Q12 16 20 19" stroke="#f0c060" strokeWidth="0.8" strokeOpacity="0.4" fill="none"/>
-              </svg>
+              <Image src="/logo.png" alt="Musabaqa Logo" width={96} height={96} className="object-contain" priority />
             </div>
           </div>
 

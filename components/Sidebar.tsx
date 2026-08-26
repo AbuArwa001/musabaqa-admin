@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import type { Dict } from '@/lib/dictionaries'
@@ -38,8 +39,9 @@ const roleColors: Record<AdminRole, { bg: string; text: string; border: string }
   MODERATOR:  { bg: 'rgba(0,216,138,0.12)',   text: '#00d88a', border: 'rgba(0,216,138,0.25)' },
 }
 
-function getInitials(name: string) {
-  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+function getInitials(name?: string) {
+  if (!name) return '?'
+  return name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
 }
 
 interface SidebarProps {
@@ -87,26 +89,9 @@ export default function Sidebar({ locale, dict, role, userName }: SidebarProps) 
       {/* ── Logo ── */}
       <div className="px-6 py-7">
         <div className={`flex items-center gap-3.5 ${isAr ? 'flex-row-reverse' : ''}`}>
-          {/* SVG Geometric logo mark */}
-          <div
-            className="relative w-11 h-11 rounded-2xl flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, rgba(240,192,96,0.2) 0%, rgba(240,192,96,0.06) 100%)',
-              border: '1px solid rgba(240,192,96,0.3)',
-              boxShadow: '0 0 20px rgba(240,192,96,0.15), inset 0 1px 0 rgba(240,192,96,0.2)',
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L14.5 7H19L15.5 10.5L17 15.5L12 12.5L7 15.5L8.5 10.5L5 7H9.5L12 2Z" fill="#f0c060" opacity="0.9"/>
-              <path d="M12 6L13.5 9H16.5L14 11L15 14L12 12.5L9 14L10 11L7.5 9H10.5L12 6Z" fill="#fde68a" opacity="0.6"/>
-              <circle cx="12" cy="19" r="2" fill="#f0c060" opacity="0.5"/>
-              <path d="M4 19 Q12 16 20 19" stroke="#f0c060" strokeWidth="0.8" strokeOpacity="0.3" fill="none"/>
-            </svg>
-            {/* Glow dot */}
-            <div
-              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full"
-              style={{ background: '#f0c060', boxShadow: '0 0 8px #f0c060' }}
-            />
+          {/* Logo mark */}
+          <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
+            <Image src="/logo.png" alt="Musabaqa Logo" width={48} height={48} className="object-contain" priority />
           </div>
           <div className={isAr ? 'text-right' : ''}>
             <p
