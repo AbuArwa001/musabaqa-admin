@@ -6,12 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import {
-  createAdminUser, createRegion, getCompetitionConfig, saveCompetitionConfig,
+  createAdminUser, createRegion, createCategory, updateCategory, getCompetitionConfig, saveCompetitionConfig,
   type Region, type Category, type AdminUserRead, type CompetitionConfig
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
-import { UserPlus, MapPin, List, Settings, Trophy, Calendar, MapPin as LocationIcon, FileText, Sliders, Save, Globe, Flag } from 'lucide-react'
+import { UserPlus, MapPin, List, Settings, Trophy, Calendar, MapPin as LocationIcon, FileText, Sliders, Save, Globe, Flag, Edit, Plus, Check } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
+import Modal from '@/components/Modal'
 
 const userSchema = z.object({
   name: z.string().min(2),
@@ -28,6 +29,15 @@ const regionSchema = z.object({
   county_id: z.string().min(1),
 })
 
+const categorySchema = z.object({
+  name_en: z.string().min(2),
+  name_ar: z.string().min(2),
+  category_group: z.string().min(2),
+  min_age: z.string().optional(),
+  max_age: z.string().min(1),
+  display_order: z.string().min(1),
+})
+
 export default function SettingsClient({ 
   regions: initialRegions, categories: initialCategories, users: initialUsers, dict, locale, token 
 }: { 
@@ -39,12 +49,23 @@ export default function SettingsClient({
   const [activeTab, setActiveTab] = useState<'config' | 'users' | 'regions' | 'categories'>('config')
   const [users, setUsers] = useState(initialUsers)
   const [regions, setRegions] = useState(initialRegions)
+  const [categories, setCategories] = useState(initialCategories)
 
   // Competition Config state
   const [compConfig, setCompConfig] = useState<CompetitionConfig>(getCompetitionConfig())
+
+  // Category Edit state
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [catNameEn, setCatNameEn] = useState('')
+  const [catNameAr, setCatNameAr] = useState('')
+  const [catGroup, setCatGroup] = useState('')
+  const [catMinAge, setCatMinAge] = useState<string>('0')
+  const [catMaxAge, setCatMaxAge] = useState<string>('99')
+  const [catOrder, setCatOrder] = useState<string>('1')
   
   const { register: regUser, handleSubmit: handleUser, reset: resetUser, watch: watchUser, formState: { isSubmitting: isSubUser } } = useForm<z.infer<typeof userSchema>>({ resolver: zodResolver(userSchema) })
   const { register: regRegion, handleSubmit: handleRegion, reset: resetRegion, formState: { isSubmitting: isSubRegion } } = useForm<z.infer<typeof regionSchema>>({ resolver: zodResolver(regionSchema) })
+  const { register: regCat, handleSubmit: handleCat, reset: resetCat, formState: { isSubmitting: isSubCat } } = useForm<z.infer<typeof categorySchema>>({ resolver: zodResolver(categorySchema) })
 
   const userRole = watchUser('role')
 
@@ -75,6 +96,49 @@ export default function SettingsClient({
     } catch (e: any) { toast.error(e.message || tc.error) }
   }
 
+  const onCategorySubmit = async (data: z.infer<typeof categorySchema>) => {
+    try {
+      const created = await createCategory(token, {
+        name_en: data.name_en,
+        name_ar: data.name_ar,
+        category_group: data.category_group,
+        min_age: data.min_age ? Number(data.min_age) : null,
+        max_age: Number(data.max_age),
+        display_order: Number(data.display_order),
+      })
+      setCategories([...categories, created])
+      toast.success('Category created successfully')
+      resetCat()
+    } catch (e: any) { toast.error(e.message || tc.error) }
+  }
+
+  const handleOpenEditCategory = (cat: Category) => {
+    setEditingCategory(cat)
+    setCatNameEn(cat.name_en)
+    setCatNameAr(cat.name_ar)
+    setCatGroup(cat.category_group)
+    setCatMinAge(cat.min_age !== null && cat.min_age !== undefined ? String(cat.min_age) : '0')
+    setCatMaxAge(String(cat.max_age || '99'))
+    setCatOrder(String(cat.display_order || '1'))
+  }
+
+  const handleSaveEditCategory = async () => {
+    if (!editingCategory) return
+    try {
+      const updated = await updateCategory(token, editingCategory.id, {
+        name_en: catNameEn,
+        name_ar: catNameAr,
+        category_group: catGroup,
+        min_age: catMinAge ? Number(catMinAge) : null,
+        max_age: Number(catMaxAge),
+        display_order: Number(catOrder),
+      })
+      setCategories(prev => prev.map(c => c.id === editingCategory.id ? updated : c))
+      toast.success('Category updated successfully')
+      setEditingCategory(null)
+    } catch (e: any) { toast.error(e.message || 'Failed to update category') }
+  }
+
   const handleSaveCompetitionConfig = () => {
     saveCompetitionConfig(compConfig)
     toast.success('Competition configuration saved successfully!')
@@ -98,7 +162,7 @@ export default function SettingsClient({
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
       <PageHeader
         title="Competition & System Settings"
-        subtitle="Manage event dates, competition scope, quota capacities, regions, and staff accounts"
+        subtitle="Manage event dates, competition scope, quota capacities, regions, judging categories, and staff accounts"
       />
       
       {/* Top Nav Tabs */}
@@ -113,6 +177,18 @@ export default function SettingsClient({
         >
           <Trophy size={14} className={activeTab === 'config' ? 'text-[#c99335]' : 'text-gray-500'} />
           <span>Competition Configuration</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer border ${
+            activeTab === 'categories'
+              ? 'bg-[#006838] text-white border-[#004d29] shadow-sm'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200'
+          }`}
+        >
+          <List size={14} />
+          <span>Judging Categories ({categories.length})</span>
         </button>
 
         <button
@@ -138,25 +214,13 @@ export default function SettingsClient({
           <MapPin size={14} />
           <span>Regions & Zones ({regions.length})</span>
         </button>
-
-        <button
-          onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer border ${
-            activeTab === 'categories'
-              ? 'bg-[#006838] text-white border-[#004d29] shadow-sm'
-              : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200'
-          }`}
-        >
-          <List size={14} />
-          <span>Judging Categories ({initialCategories.length})</span>
-        </button>
       </div>
 
       {/* ─── TAB 1: Competition Configuration ─────────────────────────────── */}
       {activeTab === 'config' && (
         <div className="space-y-6">
           
-          {/* Competition Scope Card (User Requirement) */}
+          {/* Competition Scope Card */}
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
               <Globe size={18} className="text-[#c99335]" />
@@ -405,7 +469,7 @@ export default function SettingsClient({
               </div>
             </div>
 
-            {/* Granular Matrix Table (matches user reference screenshot) */}
+            {/* Granular Matrix Table */}
             <div>
               <p className="font-bold text-xs text-gray-800 uppercase tracking-wider mb-1">
                 GRANULAR {compConfig.scope === 'NATIONAL' ? 'ZONE' : 'COUNTY'} & CATEGORY LIMITS
@@ -466,7 +530,92 @@ export default function SettingsClient({
         </div>
       )}
 
-      {/* ─── TAB 2: Administrators ────────────────────────────────────────── */}
+      {/* ─── TAB 2: Categories Management (Editable) ───────────────────────── */}
+      {activeTab === 'categories' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-gray-100 bg-gray-50/80 flex items-center justify-between">
+              <h2 className="font-serif font-bold text-sm text-gray-900">
+                Active Judging Categories ({categories.length})
+              </h2>
+              <span className="text-xs text-gray-500 font-medium">
+                Click Edit to modify category rules & age brackets
+              </span>
+            </div>
+
+            <table className="w-full text-left">
+              <thead className="bg-gray-50/60 border-b border-gray-200">
+                <tr>
+                  <th className="table-th">ID</th>
+                  <th className="table-th">Group</th>
+                  <th className="table-th">{t.category_name_en}</th>
+                  <th className="table-th">{t.category_name_ar}</th>
+                  <th className="table-th">Age Range</th>
+                  <th className="table-th text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {categories.map(c => (
+                  <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="table-td text-gray-500 font-mono text-xs">#{c.id}</td>
+                    <td className="table-td font-bold text-amber-700 text-xs uppercase">{c.category_group}</td>
+                    <td className="table-td font-semibold text-gray-900">{c.name_en}</td>
+                    <td className="table-td font-semibold text-gray-900">{c.name_ar}</td>
+                    <td className="table-td text-gray-700 text-xs font-medium">{c.min_age || 0} – {c.max_age || '∞'} yrs</td>
+                    <td className="table-td text-right">
+                      <button
+                        onClick={() => handleOpenEditCategory(c)}
+                        className="btn-secondary !py-1 !px-2.5 text-xs flex items-center gap-1 ml-auto text-emerald-800"
+                      >
+                        <Edit size={12} /> Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="lg:col-span-1 bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit">
+            <h2 className="font-serif text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Plus size={16} className="text-[#c99335]" /> Add New Category
+            </h2>
+            <form onSubmit={handleCat(onCategorySubmit)} className="space-y-3.5">
+              <div>
+                <label className="label">Category Group</label>
+                <input {...regCat('category_group')} className="input-field" placeholder="e.g. JUZ_10_15_20" />
+              </div>
+              <div>
+                <label className="label">Name (English)</label>
+                <input {...regCat('name_en')} className="input-field" placeholder="e.g. 15 Juz' (Intermediate)" />
+              </div>
+              <div>
+                <label className="label">Name (Arabic)</label>
+                <input {...regCat('name_ar')} className="input-field" placeholder="١٥ جزءاً" dir="rtl" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Min Age</label>
+                  <input type="number" {...regCat('min_age')} className="input-field" placeholder="0" />
+                </div>
+                <div>
+                  <label className="label">Max Age</label>
+                  <input type="number" {...regCat('max_age')} className="input-field" placeholder="18" />
+                </div>
+              </div>
+              <div>
+                <label className="label">Display Order</label>
+                <input type="number" {...regCat('display_order')} className="input-field" placeholder="1" />
+              </div>
+              <button type="submit" disabled={isSubCat} className="btn-primary w-full mt-3 text-xs">
+                Create Category
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── TAB 3: Administrators ────────────────────────────────────────── */}
       {activeTab === 'users' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -540,7 +689,7 @@ export default function SettingsClient({
         </div>
       )}
 
-      {/* ─── TAB 3: Regions ───────────────────────────────────────────────── */}
+      {/* ─── TAB 4: Regions ───────────────────────────────────────────────── */}
       {activeTab === 'regions' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
@@ -589,33 +738,41 @@ export default function SettingsClient({
         </div>
       )}
 
-      {/* ─── TAB 4: Categories ────────────────────────────────────────────── */}
-      {activeTab === 'categories' && (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50/80 border-b border-gray-200">
-              <tr>
-                <th className="table-th">ID</th>
-                <th className="table-th">Group</th>
-                <th className="table-th">{t.category_name_en}</th>
-                <th className="table-th">{t.category_name_ar}</th>
-                <th className="table-th">Age Range</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {initialCategories.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="table-td text-gray-500 font-mono text-xs">#{c.id}</td>
-                  <td className="table-td font-bold text-amber-700 text-xs uppercase">{c.category_group}</td>
-                  <td className="table-td font-semibold text-gray-900">{c.name_en}</td>
-                  <td className="table-td font-semibold text-gray-900">{c.name_ar}</td>
-                  <td className="table-td text-gray-700 text-xs font-medium">{c.min_age || 0} – {c.max_age || '∞'} yrs</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Edit Category Modal */}
+      <Modal isOpen={!!editingCategory} onClose={() => setEditingCategory(null)} title={`Edit Category — ${editingCategory?.name_en}`}>
+        <div className="space-y-4">
+          <div>
+            <label className="label">Category Group</label>
+            <input value={catGroup} onChange={e => setCatGroup(e.target.value)} className="input-field" />
+          </div>
+          <div>
+            <label className="label">Name (English)</label>
+            <input value={catNameEn} onChange={e => setCatNameEn(e.target.value)} className="input-field" />
+          </div>
+          <div>
+            <label className="label">Name (Arabic)</label>
+            <input value={catNameAr} onChange={e => setCatNameAr(e.target.value)} className="input-field" dir="rtl" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Minimum Age</label>
+              <input type="number" value={catMinAge} onChange={e => setCatMinAge(e.target.value)} className="input-field" />
+            </div>
+            <div>
+              <label className="label">Maximum Age</label>
+              <input type="number" value={catMaxAge} onChange={e => setCatMaxAge(e.target.value)} className="input-field" />
+            </div>
+          </div>
+          <div>
+            <label className="label">Display Order</label>
+            <input type="number" value={catOrder} onChange={e => setCatOrder(e.target.value)} className="input-field" />
+          </div>
+          <div className="flex gap-3 justify-end pt-3">
+            <button onClick={() => setEditingCategory(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleSaveEditCategory} className="btn-primary">Save Changes</button>
+          </div>
         </div>
-      )}
+      </Modal>
 
     </div>
   )

@@ -99,14 +99,20 @@ export async function createRegion(token: string, data: { name_en: string; name_
   return request('/api/v1/regions/', { method: 'POST', body: JSON.stringify(data) }, token)
 }
 
-// ─── Categories ───────────────────────────────────────────────────────────────
-
 export interface Category {
   id: number; name_en: string; name_ar: string;
   min_age: number | null; max_age: number; category_group: string; display_order: number
 }
 
 export async function listCategories(): Promise<Category[]> { return request('/api/v1/categories/') }
+
+export async function createCategory(token: string, data: Partial<Category>): Promise<Category> {
+  return request('/api/v1/categories/', { method: 'POST', body: JSON.stringify(data) }, token)
+}
+
+export async function updateCategory(token: string, id: number, data: Partial<Category>): Promise<Category> {
+  return request(`/api/v1/categories/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, token)
+}
 
 // ─── Students ─────────────────────────────────────────────────────────────────
 
