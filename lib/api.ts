@@ -58,7 +58,12 @@ export interface InstitutionRead {
   id: number; name: string; type: string; contact_person: string;
   phone: string; email: string; region_id: number | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED'; rejection_reason: string | null;
-  preferred_language: 'EN' | 'AR'; created_at: string; is_active: boolean
+  preferred_language: 'EN' | 'AR'; created_at: string; is_active: boolean;
+  registration_document?: string | null;
+  title_deed_document?: string | null;
+  recommendation_letter?: string | null;
+  contact_person_id_doc?: string | null;
+  address?: string | null;
 }
 
 export async function listInstitutions(token: string, status?: string): Promise<InstitutionRead[]> {
@@ -68,6 +73,10 @@ export async function listInstitutions(token: string, status?: string): Promise<
 
 export async function getInstitution(token: string, id: number): Promise<InstitutionRead> {
   return request(`/api/v1/institutions/${id}`, {}, token)
+}
+
+export async function updateInstitution(token: string, id: number, data: Partial<InstitutionRead>): Promise<InstitutionRead> {
+  return request(`/api/v1/institutions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, token)
 }
 
 export async function approveInstitution(token: string, id: number): Promise<InstitutionRead> {
@@ -109,12 +118,22 @@ export interface StudentRead {
   photo: string | null; id_document: string | null; review_status: ReviewStatus;
   rejection_reason: string | null; is_backup: boolean; is_deleted: boolean;
   deletion_reason: string | null; archived_at: string | null;
-  regret_email_sent: boolean; regret_email_sent_at: string | null; created_at: string
+  regret_email_sent: boolean; regret_email_sent_at: string | null; created_at: string;
+  nationality?: string; residence?: string; home_county?: string; alternative_phone?: string;
+  email?: string; review_notes?: string | null;
 }
 
 export async function listStudents(token: string, params?: Record<string, string>): Promise<StudentRead[]> {
   const qs = params ? '?' + new URLSearchParams(params).toString() : ''
   return request(`/api/v1/students/${qs}`, {}, token)
+}
+
+export async function getStudent(token: string, id: number): Promise<StudentRead> {
+  return request(`/api/v1/students/${id}`, {}, token)
+}
+
+export async function updateStudent(token: string, id: number, data: Partial<StudentRead>): Promise<StudentRead> {
+  return request(`/api/v1/students/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, token)
 }
 
 export async function approveStudent(token: string, id: number): Promise<StudentRead> {
@@ -127,15 +146,21 @@ export async function rejectStudent(token: string, id: number, rejection_reason:
   }, token)
 }
 
-export async function reassignStudentCategory(token: string, id: number, category_id: number, age_exemption?: boolean): Promise<StudentRead> {
-  return request(`/api/v1/students/${id}/reassign-category`, {
-    method: 'POST', body: JSON.stringify({ category_id, age_exemption })
+export async function reassignStudentCategory(token: string, id: number, new_category_id: number, age_exemption?: boolean): Promise<StudentRead> {
+  return request(`/api/v1/students/${id}/category`, {
+    method: 'PATCH', body: JSON.stringify({ new_category_id, age_exemption })
   }, token)
 }
 
 export async function softDeleteStudent(token: string, id: number, deletion_reason: string): Promise<StudentRead> {
-  return request(`/api/v1/students/${id}/soft-delete`, {
-    method: 'POST', body: JSON.stringify({ deletion_reason })
+  return request(`/api/v1/students/${id}`, {
+    method: 'DELETE', body: JSON.stringify({ deletion_reason })
+  }, token)
+}
+
+export async function bulkSoftDeleteStudents(token: string, student_ids: number[], deletion_reason: string): Promise<StudentRead[]> {
+  return request('/api/v1/students/bulk/soft-delete', {
+    method: 'DELETE', body: JSON.stringify({ student_ids, deletion_reason })
   }, token)
 }
 
@@ -144,21 +169,21 @@ export async function restoreStudent(token: string, id: number): Promise<Student
 }
 
 export async function permanentDeleteStudent(token: string, id: number): Promise<void> {
-  return request(`/api/v1/students/${id}/permanent-delete`, { method: 'DELETE' }, token)
+  return request(`/api/v1/students/${id}/permanent`, { method: 'DELETE' }, token)
 }
 
 export async function sendRegretEmail(token: string, id: number): Promise<void> {
-  return request(`/api/v1/students/${id}/send-regret-email`, { method: 'POST' }, token)
+  return request(`/api/v1/students/${id}/regret-email`, { method: 'POST' }, token)
 }
 
 export async function bulkSendRegretEmails(token: string, student_ids: number[]): Promise<void> {
-  return request(`/api/v1/students/bulk-send-regret-emails`, {
+  return request('/api/v1/students/bulk/regret-email', {
     method: 'POST', body: JSON.stringify({ student_ids })
   }, token)
 }
 
 export async function updateArchivalReason(token: string, id: number, deletion_reason: string): Promise<StudentRead> {
-  return request(`/api/v1/students/${id}/update-deletion-reason`, {
+  return request(`/api/v1/students/${id}/deletion-reason`, {
     method: 'PATCH', body: JSON.stringify({ deletion_reason })
   }, token)
 }
@@ -298,6 +323,79 @@ export async function startBulkDossiers(token: string, student_ids: number[], la
 
 export async function getDossierJobStatus(token: string, jobId: string): Promise<BulkDossierJob> {
   return request(`/api/v1/archive/dossiers/jobs/${jobId}`, {}, token)
+}
+
+// ─── Competition Configuration ────────────────────────────────────────────────
+
+export interface CompetitionConfig {
+  scope: 'NATIONAL' | 'COUNTY_REGIONAL';
+  reg_opening_date: string;
+  reg_closing_date: string;
+  prelims_start_date: string;
+  prelims_end_date: string;
+  finals_start_date: string;
+  finals_end_date: string;
+  venue_en: string;
+  venue_ar: string;
+  overview_en: string;
+  overview_ar: string;
+  category_limit: number;
+  county_limit: number;
+  granular_limits: Record<string, Record<string, number | 'Def'>>;
+  custom_regions: Array<{ id: string; name_en: string; name_ar: string }>;
+}
+
+const DEFAULT_COMPETITION_CONFIG: CompetitionConfig = {
+  scope: 'NATIONAL',
+  reg_opening_date: '2026-08-13',
+  reg_closing_date: '2026-09-01',
+  prelims_start_date: '2026-09-05',
+  prelims_end_date: '2026-09-07',
+  finals_start_date: '2026-10-11',
+  finals_end_date: '2026-10-13',
+  venue_en: 'Jamia Mosque Nairobi, Kenya',
+  venue_ar: 'مسجد جامعة نيروبي، كينيا',
+  overview_en: 'The Quran Competition 2026 is an annual prestigious event organised by Jamia Mosque Committee. Open to Muslim youth across Kenya to celebrate memorisation (Hifz) and exemplary recitation (Tajweed).',
+  overview_ar: 'مسابقة القرآن الكريم ٢٠٢٦ حدث سنوي مرموق تنظمه لجنة مسجد جامعة نيروبي في كينيا. مفتوحة للشباب المسلم للاحتفاء بحفظ القرآن الكريم وحسن تلاوته.',
+  category_limit: 10,
+  county_limit: 10,
+  granular_limits: {
+    'Isiolo': { '30': 8, '20': 9, '15': 11, '5': 12 },
+    'Nairobi': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Mandera': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Nakuru': { '30': 8, '20': 'Def', '15': 11, '5': 11 },
+    'Wajir': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Mombasa': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Garissa': { '30': 11, '20': 8, '15': 9, '5': 12 },
+    'Eastleigh': { '30': 10, '20': 10, '15': 12, '5': 15 },
+    'Kiamaiko': { '30': 8, '20': 8, '15': 10, '5': 12 },
+    'Komarock': { '30': 6, '20': 8, '15': 8, '5': 10 },
+    'Kasarani': { '30': 8, '20': 8, '15': 10, '5': 10 },
+  },
+  custom_regions: [
+    { id: 'eastleigh', name_en: 'Eastleigh', name_ar: 'إيستلي' },
+    { id: 'kiamaiko', name_en: 'Kiamaiko', name_ar: 'كياميكو' },
+    { id: 'komarock', name_en: 'Komarock', name_ar: 'كوماروك' },
+    { id: 'kasarani', name_en: 'Kasarani', name_ar: 'كاساراني' },
+    { id: 'westlands', name_en: 'Westlands', name_ar: 'ويستلاندز' },
+    { id: 'kibra', name_en: 'Kibra', name_ar: 'كيبرا' },
+  ]
+}
+
+export function getCompetitionConfig(): CompetitionConfig {
+  if (typeof window === 'undefined') return DEFAULT_COMPETITION_CONFIG
+  try {
+    const saved = localStorage.getItem('musabaqa_competition_config')
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return DEFAULT_COMPETITION_CONFIG
+}
+
+export function saveCompetitionConfig(config: CompetitionConfig): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem('musabaqa_competition_config', JSON.stringify(config))
+  } catch {}
 }
 
 // ─── WebSocket URL ────────────────────────────────────────────────────────────

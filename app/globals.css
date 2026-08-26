@@ -35,6 +35,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-cinzel), serif;
+    color: #111827;
   }
 
   [dir="rtl"] {
@@ -43,6 +44,11 @@
 
   [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6 {
     font-family: var(--font-arabic), var(--font-cinzel), serif;
+  }
+
+  input, select, textarea, option {
+    color: #111827 !important;
+    background-color: #ffffff;
   }
 }
 
@@ -109,7 +115,7 @@
     justify-content: center;
     gap: 0.5rem;
     background: linear-gradient(135deg, #006838 0%, #004d29 100%);
-    color: #ffffff;
+    color: #ffffff !important;
     font-family: var(--font-cinzel), serif;
     font-weight: 700;
     font-size: 0.875rem;
@@ -140,7 +146,7 @@
     justify-content: center;
     gap: 0.5rem;
     background: linear-gradient(135deg, #c99335 0%, #a67420 100%);
-    color: #ffffff;
+    color: #ffffff !important;
     font-family: var(--font-cinzel), serif;
     font-weight: 700;
     font-size: 0.875rem;
@@ -163,7 +169,7 @@
     justify-content: center;
     gap: 0.5rem;
     background: #ffffff;
-    color: #374151;
+    color: #374151 !important;
     border: 1px solid #e5e7eb;
     font-family: var(--font-outfit), sans-serif;
     font-weight: 600;
@@ -177,15 +183,15 @@
   .btn-secondary:hover {
     background: #f9fafb;
     border-color: #d1d5db;
-    color: #111827;
+    color: #111827 !important;
   }
 
   /* Inputs */
   .input-field {
     width: 100%;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    color: #111827;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    color: #111827 !important;
     border-radius: 0.625rem;
     padding: 0.625rem 0.875rem;
     font-size: 0.875rem;
@@ -194,11 +200,11 @@
     outline: none;
   }
   .input-field:focus {
-    border-color: #006838;
-    box-shadow: 0 0 0 3px rgba(0, 104, 56, 0.12);
+    border-color: #006838 !important;
+    box-shadow: 0 0 0 3px rgba(0, 104, 56, 0.15) !important;
   }
   .input-field::placeholder {
-    color: #9ca3af;
+    color: #9ca3af !important;
   }
 
   .label {
@@ -206,7 +212,7 @@
     font-size: 0.8125rem;
     font-weight: 600;
     font-family: var(--font-outfit), sans-serif;
-    color: #374151;
+    color: #1f2937 !important;
     margin-bottom: 0.375rem;
   }
 
@@ -268,7 +274,7 @@
     padding: 0.75rem 1rem;
     font-size: 0.6875rem;
     font-weight: 700;
-    color: #6b7280;
+    color: #374151 !important;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     background: #f9fafb;
@@ -278,7 +284,7 @@
   .table-td {
     padding: 0.875rem 1rem;
     font-size: 0.875rem;
-    color: #1f2937;
+    color: #111827 !important;
     border-bottom: 1px solid #f3f4f6;
   }
 
