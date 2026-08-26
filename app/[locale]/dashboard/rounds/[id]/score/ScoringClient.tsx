@@ -17,7 +17,7 @@ const DEDUCTION_TYPES = [
 ]
 
 export default function ScoringClient({ 
-  round, students, results, dict, locale, token, currentUserId 
+  round, students, results, dict, locale, token 
 }: { 
   round: RoundRead, students: StudentRead[], results: RoundResult[], dict: Dict, locale: string, token: string, currentUserId: number 
 }) {
@@ -68,81 +68,82 @@ export default function ScoringClient({
   const runningScore = myScore ? myScore.total_score : (100 - totalDeducted)
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <Link href={`/${locale}/dashboard/rounds`} className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors text-sm">
-          <ArrowLeft size={16} /> Back to Rounds
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Link href={`/${locale}/dashboard/rounds`} className="inline-flex items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-colors text-xs font-semibold">
+          <ArrowLeft size={14} /> Back to Rounds
         </Link>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-xs font-semibold">
           <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-          <span className={wsConnected ? 'text-emerald-400' : 'text-red-400'}>
+          <span className={wsConnected ? 'text-emerald-700' : 'text-rose-700'}>
             {wsConnected ? dict.live.connected : dict.live.disconnected}
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1 glass overflow-hidden h-[calc(100vh-160px)] flex flex-col">
-          <div className="p-4 border-b border-white/10 bg-black/20">
-            <h2 className="font-semibold text-white">Roster</h2>
+        {/* Roster list */}
+        <div className="lg:col-span-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm flex flex-col h-[calc(100vh-190px)]">
+          <div className="p-4 border-b border-gray-100 bg-gray-50/80">
+            <h2 className="font-serif font-bold text-sm text-gray-900">Student Roster</h2>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
             {students.map(s => (
               <button
                 key={s.id}
                 onClick={() => setActiveStudentId(s.id)}
-                className={`w-full text-left p-4 border-b border-white/5 transition-colors ${activeStudentId === s.id ? 'bg-amber-600/20 border-l-4 border-l-amber-500' : 'hover:bg-white/5 border-l-4 border-l-transparent'}`}
+                className={`w-full text-left p-3.5 transition-colors cursor-pointer ${activeStudentId === s.id ? 'bg-amber-50/80 border-l-4 border-l-[#c99335]' : 'hover:bg-gray-50 border-l-4 border-l-transparent'}`}
               >
-                <p className={`font-medium ${activeStudentId === s.id ? 'text-amber-400' : 'text-stone-300'}`}>{s.full_name}</p>
+                <p className={`font-semibold text-sm ${activeStudentId === s.id ? 'text-amber-900' : 'text-gray-800'}`}>{s.full_name}</p>
                 {results.find(r => r.student_id === s.id) && (
-                  <span className="text-xs text-emerald-500 mt-1 block">Completed</span>
+                  <span className="text-[11px] font-bold text-emerald-700 mt-0.5 block">✓ Completed</span>
                 )}
               </button>
             ))}
           </div>
         </div>
 
+        {/* Scoring Console */}
         <div className="lg:col-span-3">
           {activeStudent ? (
-            <div className="glass p-8 min-h-[calc(100vh-160px)] flex flex-col">
-              <div className="flex items-start justify-between mb-8 border-b border-white/10 pb-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-8 min-h-[calc(100vh-190px)] flex flex-col shadow-sm">
+              <div className="flex items-start justify-between mb-8 border-b border-gray-100 pb-6">
                 <div>
-                  <h1 className="text-2xl font-bold text-white">{activeStudent.full_name}</h1>
-                  <p className="text-stone-400 mt-1">Round #{round.id} — {round.round_type}</p>
+                  <h1 className="font-serif text-2xl font-bold text-gray-900">{activeStudent.full_name}</h1>
+                  <p className="text-gray-500 text-xs mt-1 font-medium">Round #{round.id} — {round.round_type}</p>
                 </div>
                 <div className={`text-${isAr ? 'left' : 'right'}`}>
-                  <p className="text-stone-400 text-sm mb-1">{t.scoring_running}</p>
-                  <p className="text-5xl font-bold text-amber-400 drop-shadow-[0_0_15px_rgba(201,147,53,0.3)]">
+                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-1">{t.scoring_running}</p>
+                  <p className="text-5xl font-bold font-serif text-[#006838]">
                     {runningScore.toFixed(2)}
                   </p>
                 </div>
               </div>
 
               {round.status !== 'ACTIVE' && (
-                <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-xl flex items-start gap-3 mb-8">
-                  <AlertCircle className="text-red-400 shrink-0 mt-0.5" />
+                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 mb-8">
+                  <AlertCircle className="text-amber-700 shrink-0 mt-0.5 w-5 h-5" />
                   <div>
-                    <h3 className="text-red-400 font-semibold">Round is not active</h3>
-                    <p className="text-red-400/80 text-sm mt-1">You cannot submit scores until the round is started.</p>
+                    <h3 className="text-amber-900 font-bold text-sm">Round is not active</h3>
+                    <p className="text-amber-800 text-xs mt-0.5">You cannot submit deduction scores until the round is started by the administrator.</p>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-auto">
                 {DEDUCTION_TYPES.map(dt => (
                   <button
                     key={dt.id}
                     disabled={round.status !== 'ACTIVE' || isSubmitting}
                     onClick={() => handleDeduction(dt.id, dt.default_amount)}
-                    className="group relative p-6 rounded-2xl bg-black/40 border border-white/10 hover:border-amber-500/40 hover:bg-amber-600/5 transition-all text-left flex justify-between items-center overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                    className="p-5 rounded-xl bg-gray-50 border border-gray-200 hover:border-amber-400 hover:bg-amber-50/50 transition-all text-left flex justify-between items-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-700" />
                     <div>
-                      <p className="font-semibold text-white text-lg">{isAr ? dt.name_ar : dt.name_en}</p>
-                      <p className="text-red-400 text-sm mt-1">-{dt.default_amount} points</p>
+                      <p className="font-bold text-gray-900 text-sm font-serif">{isAr ? dt.name_ar : dt.name_en}</p>
+                      <p className="text-rose-600 text-xs font-semibold mt-1">-{dt.default_amount} points</p>
                     </div>
                     {deductions[dt.id] > 0 && (
-                      <span className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-sm">
+                      <span className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xs">
                         {deductions[dt.id]}
                       </span>
                     )}
@@ -150,29 +151,29 @@ export default function ScoringClient({
                 ))}
               </div>
 
-              <div className="mt-8 pt-8 border-t border-white/10 flex items-center justify-between">
+              <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
                 <div>
                   {currentResult ? (
-                    <div className="text-emerald-400 flex items-center gap-2">
-                      <CheckCircle size={18} /> Panel score computed: {currentResult.final_score.toFixed(2)}
+                    <div className="text-emerald-700 font-semibold text-sm flex items-center gap-1.5">
+                      <CheckCircle size={16} /> Panel score computed: {currentResult.final_score.toFixed(2)}
                     </div>
                   ) : myScore?.all_judges_submitted ? (
-                    <div className="text-emerald-400">{t.scoring_submitted}</div>
+                    <div className="text-emerald-700 font-semibold text-sm">{t.scoring_submitted}</div>
                   ) : (
-                    <div className="text-stone-400 text-sm">{t.panel_score_pending}</div>
+                    <div className="text-gray-500 text-xs">{t.panel_score_pending}</div>
                   )}
                 </div>
                 <button
                   onClick={() => activeStudentId && getMyScore(token, round.id, activeStudentId).then(setMyScore)}
-                  className="btn-ghost flex items-center gap-2"
+                  className="btn-secondary text-xs flex items-center gap-1.5"
                 >
-                  <RefreshCcw size={16} /> Refresh
+                  <RefreshCcw size={13} /> Refresh Score
                 </button>
               </div>
             </div>
           ) : (
-            <div className="glass p-8 min-h-[calc(100vh-160px)] flex items-center justify-center text-stone-500">
-              Select a student from the roster to begin scoring
+            <div className="bg-white border border-gray-200 rounded-xl p-8 min-h-[calc(100vh-190px)] flex items-center justify-center text-gray-400 text-sm">
+              Select a contestant from the roster to begin live judging
             </div>
           )}
         </div>

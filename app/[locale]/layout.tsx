@@ -1,16 +1,33 @@
 import type { Metadata } from 'next'
-import { notFound, redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { notFound } from 'next/navigation'
 import { Toaster } from 'sonner'
-import { isValidLocale, getDictionary } from '@/lib/dictionaries'
-import { decodeAdminToken } from '@/lib/auth'
+import { isValidLocale } from '@/lib/dictionaries'
+import { Cinzel, Outfit, Noto_Sans_Arabic } from 'next/font/google'
 import '../globals.css'
+
+const cinzel = Cinzel({
+  variable: '--font-cinzel',
+  subsets: ['latin'],
+  display: 'swap',
+})
+
+const outfit = Outfit({
+  variable: '--font-outfit',
+  subsets: ['latin'],
+  display: 'swap',
+})
+
+const notoArabic = Noto_Sans_Arabic({
+  variable: '--font-arabic',
+  subsets: ['arabic'],
+  display: 'swap',
+})
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Musabaqa Admin',
-  description: 'Admin Dashboard for Musabaqa Quran Competition',
+  title: 'Musabaqa Admin - Jamia Mosque Nairobi',
+  description: 'Administrative Management Portal for Musabaqa Quran Competition - Jamia Mosque Nairobi',
 }
 
 export default async function LocaleLayout({
@@ -25,65 +42,14 @@ export default async function LocaleLayout({
   const isRtl = locale === 'ar'
 
   return (
-    <html lang={locale} dir={isRtl ? 'rtl' : 'ltr'} suppressHydrationWarning>
-      <body className="min-h-screen antialiased" suppressHydrationWarning>
-
-        {/* Noise texture overlay */}
-        <div className="noise-overlay" />
-
-        {/* Animated ambient orbs */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-          {/* Gold orb – top left */}
-          <div
-            className="animate-gradient-flow"
-            style={{
-              position: 'absolute',
-              top: '-15%',
-              left: '-10%',
-              width: '55vw',
-              height: '55vw',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(240,192,96,0.08) 0%, transparent 70%)',
-              filter: 'blur(60px)',
-              animationDelay: '0s',
-            }}
-          />
-          {/* Emerald orb – center right */}
-          <div
-            className="animate-gradient-flow"
-            style={{
-              position: 'absolute',
-              top: '30%',
-              right: '-15%',
-              width: '45vw',
-              height: '45vw',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(0,216,138,0.06) 0%, transparent 70%)',
-              filter: 'blur(60px)',
-              animationDelay: '3s',
-            }}
-          />
-          {/* Purple orb – bottom center */}
-          <div
-            className="animate-gradient-flow"
-            style={{
-              position: 'absolute',
-              bottom: '-10%',
-              left: '25%',
-              width: '50vw',
-              height: '50vw',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%)',
-              filter: 'blur(80px)',
-              animationDelay: '6s',
-            }}
-          />
-        </div>
-
-        <div style={{ position: 'relative', zIndex: 2 }}>
-          {children}
-        </div>
-
+    <html
+      lang={locale}
+      dir={isRtl ? 'rtl' : 'ltr'}
+      className={`${cinzel.variable} ${outfit.variable} ${notoArabic.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <body className="min-h-full flex flex-col font-sans bg-gray-50 text-gray-900" suppressHydrationWarning>
+        {children}
         <Toaster richColors position={isRtl ? 'top-left' : 'top-right'} />
       </body>
     </html>

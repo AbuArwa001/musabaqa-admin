@@ -11,6 +11,7 @@ import {
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 import { UserPlus, MapPin, List, Settings } from 'lucide-react'
+import PageHeader from '@/components/PageHeader'
 
 const userSchema = z.object({
   name: z.string().min(2),
@@ -24,7 +25,7 @@ const userSchema = z.object({
 const regionSchema = z.object({
   name_en: z.string().min(2),
   name_ar: z.string().min(2),
-  county_id: z.string().min(1), // usually a number, keep string for form
+  county_id: z.string().min(1),
 })
 
 export default function SettingsClient({ 
@@ -34,7 +35,6 @@ export default function SettingsClient({
 }) {
   const t = dict.settings
   const tc = dict.common
-  const isAr = locale === 'ar'
 
   const [activeTab, setActiveTab] = useState<'users' | 'regions' | 'categories'>('users')
   const [users, setUsers] = useState(initialUsers)
@@ -69,63 +69,83 @@ export default function SettingsClient({
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-stone-400 mb-8">{t.title}</h1>
+    <div className="space-y-6">
+      <PageHeader title={t.title} subtitle="Manage admin accounts, competition regions, and judging categories" />
       
-      <div className="flex flex-wrap gap-2 mb-6 border-b border-white/10 pb-4">
-        <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${activeTab === 'users' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-stone-400 hover:text-white'}`}>
-          <Settings size={16} /> {t.tab_users}
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border ${
+            activeTab === 'users'
+              ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+          }`}
+        >
+          <Settings size={14} /> {t.tab_users}
         </button>
-        <button onClick={() => setActiveTab('regions')} className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${activeTab === 'regions' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-stone-400 hover:text-white'}`}>
-          <MapPin size={16} /> {t.tab_regions}
+        <button
+          onClick={() => setActiveTab('regions')}
+          className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border ${
+            activeTab === 'regions'
+              ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+          }`}
+        >
+          <MapPin size={14} /> {t.tab_regions}
         </button>
-        <button onClick={() => setActiveTab('categories')} className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${activeTab === 'categories' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-stone-400 hover:text-white'}`}>
-          <List size={16} /> {t.tab_categories}
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border ${
+            activeTab === 'categories'
+              ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+          }`}
+        >
+          <List size={14} /> {t.tab_categories}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Users Tab */}
         {activeTab === 'users' && (
           <>
-            <div className="lg:col-span-2 glass overflow-hidden">
-              <table className="w-full">
-                <thead className="border-b border-white/10 bg-black/20">
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50/80 border-b border-gray-200">
                   <tr>
                     <th className="table-th">{t.user_name}</th>
                     <th className="table-th">{t.user_email}</th>
                     <th className="table-th">{t.user_role}</th>
-                    <th className="table-th">{tc.actions}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {users.map(u => (
-                    <tr key={u.id} className="table-row-hover border-b border-white/5 last:border-0">
-                      <td className="table-td font-medium text-white">{u.name}</td>
-                      <td className="table-td text-stone-400">{u.email}</td>
+                    <tr key={u.id} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="table-td font-semibold text-gray-900">{u.name}</td>
+                      <td className="table-td text-gray-600 font-mono text-xs">{u.email}</td>
                       <td className="table-td">
-                        <span className="text-xs px-2 py-1 rounded bg-white/10 text-stone-300">{u.role}</span>
-                        {u.judge_role && <span className="ml-2 text-xs text-amber-400">{u.judge_role}</span>}
+                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-semibold border border-gray-200">{u.role}</span>
+                        {u.judge_role && <span className="ml-1.5 text-xs text-amber-700 font-medium">({u.judge_role})</span>}
                       </td>
-                      <td className="table-td"><button className="text-stone-500 hover:text-white">Edit</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             
-            <div className="lg:col-span-1 glass p-6 h-fit">
-              <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <UserPlus size={18} className="text-amber-400" /> {t.user_create}
+            <div className="lg:col-span-1 bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit">
+              <h2 className="font-serif text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <UserPlus size={16} className="text-[#c99335]" /> {t.user_create}
               </h2>
-              <form onSubmit={handleUser(onUserSubmit)} className="space-y-4">
-                <div><label className="label">{t.user_name}</label><input {...regUser('name')} className="input-field" /></div>
-                <div><label className="label">{t.user_email}</label><input {...regUser('email')} type="email" className="input-field" dir="ltr" /></div>
-                <div><label className="label">{t.user_password}</label><input {...regUser('password')} type="password" className="input-field" dir="ltr" /></div>
+              <form onSubmit={handleUser(onUserSubmit)} className="space-y-3.5">
+                <div><label className="label">{t.user_name}</label><input {...regUser('name')} className="input-field" placeholder="Full name" /></div>
+                <div><label className="label">{t.user_email}</label><input {...regUser('email')} type="email" className="input-field" placeholder="user@jmc.or.ke" dir="ltr" /></div>
+                <div><label className="label">{t.user_password}</label><input {...regUser('password')} type="password" className="input-field" placeholder="••••••••" dir="ltr" /></div>
                 <div>
                   <label className="label">{t.user_role}</label>
-                  <select {...regUser('role')} className="input-field">
+                  <select {...regUser('role')} className="input-field cursor-pointer">
                     <option value="SUPERADMIN">Super Admin</option>
                     <option value="MODERATOR">Moderator</option>
                     <option value="JUDGE">Judge</option>
@@ -134,20 +154,20 @@ export default function SettingsClient({
                 {userRole === 'JUDGE' && (
                   <div>
                     <label className="label">{t.user_judge_role}</label>
-                    <select {...regUser('judge_role')} className="input-field">
-                      <option value="REGULAR">Regular</option>
-                      <option value="GUEST_NEUTRAL">Guest Neutral</option>
+                    <select {...regUser('judge_role')} className="input-field cursor-pointer">
+                      <option value="REGULAR">Regular Judge</option>
+                      <option value="GUEST_NEUTRAL">Guest Neutral Judge</option>
                     </select>
                   </div>
                 )}
                 <div>
                   <label className="label">{t.user_language}</label>
-                  <select {...regUser('preferred_language')} className="input-field">
+                  <select {...regUser('preferred_language')} className="input-field cursor-pointer">
                     <option value="EN">English</option>
                     <option value="AR">Arabic</option>
                   </select>
                 </div>
-                <button type="submit" disabled={isSubUser} className="btn-primary w-full mt-4">{t.user_create}</button>
+                <button type="submit" disabled={isSubUser} className="btn-primary w-full mt-3 text-xs">{t.user_create}</button>
               </form>
             </div>
           </>
@@ -156,9 +176,9 @@ export default function SettingsClient({
         {/* Regions Tab */}
         {activeTab === 'regions' && (
           <>
-            <div className="lg:col-span-2 glass overflow-hidden">
-              <table className="w-full">
-                <thead className="border-b border-white/10 bg-black/20">
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50/80 border-b border-gray-200">
                   <tr>
                     <th className="table-th">ID</th>
                     <th className="table-th">{t.region_name_en}</th>
@@ -166,38 +186,38 @@ export default function SettingsClient({
                     <th className="table-th">County ID</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {regions.map(r => (
-                    <tr key={r.id} className="table-row-hover border-b border-white/5 last:border-0">
-                      <td className="table-td text-stone-400">#{r.id}</td>
-                      <td className="table-td text-white">{r.name_en}</td>
-                      <td className="table-td text-white">{r.name_ar}</td>
-                      <td className="table-td text-stone-400">{r.county_id}</td>
+                    <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="table-td text-gray-500 font-mono text-xs">#{r.id}</td>
+                      <td className="table-td font-semibold text-gray-900">{r.name_en}</td>
+                      <td className="table-td font-semibold text-gray-900">{r.name_ar}</td>
+                      <td className="table-td text-gray-500">{r.county_id}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="lg:col-span-1 glass p-6 h-fit">
-              <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <MapPin size={18} className="text-amber-400" /> {t.regions_add}
+            <div className="lg:col-span-1 bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit">
+              <h2 className="font-serif text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <MapPin size={16} className="text-[#c99335]" /> {t.regions_add}
               </h2>
-              <form onSubmit={handleRegion(onRegionSubmit)} className="space-y-4">
-                <div><label className="label">{t.region_name_en}</label><input {...regRegion('name_en')} className="input-field" dir="ltr" /></div>
-                <div><label className="label">{t.region_name_ar}</label><input {...regRegion('name_ar')} className="input-field" dir="rtl" /></div>
-                <div><label className="label">{t.region_county}</label><input type="number" {...regRegion('county_id')} className="input-field" dir="ltr" /></div>
-                <button type="submit" disabled={isSubRegion} className="btn-primary w-full mt-4">{tc.save}</button>
+              <form onSubmit={handleRegion(onRegionSubmit)} className="space-y-3.5">
+                <div><label className="label">{t.region_name_en}</label><input {...regRegion('name_en')} className="input-field" placeholder="e.g. Coast Region" dir="ltr" /></div>
+                <div><label className="label">{t.region_name_ar}</label><input {...regRegion('name_ar')} className="input-field" placeholder="المنطقة الساحلية" dir="rtl" /></div>
+                <div><label className="label">{t.region_county}</label><input type="number" {...regRegion('county_id')} className="input-field" placeholder="County code" dir="ltr" /></div>
+                <button type="submit" disabled={isSubRegion} className="btn-primary w-full mt-3 text-xs">{tc.save}</button>
               </form>
             </div>
           </>
         )}
 
-        {/* Categories Tab (Read-only list for demo) */}
+        {/* Categories Tab */}
         {activeTab === 'categories' && (
-          <div className="lg:col-span-3 glass overflow-hidden">
-            <table className="w-full">
-              <thead className="border-b border-white/10 bg-black/20">
+          <div className="lg:col-span-3 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <table className="w-full text-left">
+              <thead className="bg-gray-50/80 border-b border-gray-200">
                 <tr>
                   <th className="table-th">ID</th>
                   <th className="table-th">Group</th>
@@ -206,14 +226,14 @@ export default function SettingsClient({
                   <th className="table-th">Age Range</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {initialCategories.map(c => (
-                  <tr key={c.id} className="table-row-hover border-b border-white/5 last:border-0">
-                    <td className="table-td text-stone-400">#{c.id}</td>
-                    <td className="table-td text-amber-400 text-xs font-medium uppercase">{c.category_group}</td>
-                    <td className="table-td text-white">{c.name_en}</td>
-                    <td className="table-td text-white">{c.name_ar}</td>
-                    <td className="table-td text-stone-400">{c.min_age || 0} - {c.max_age || '∞'}</td>
+                  <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="table-td text-gray-500 font-mono text-xs">#{c.id}</td>
+                    <td className="table-td font-bold text-amber-700 text-xs uppercase">{c.category_group}</td>
+                    <td className="table-td font-semibold text-gray-900">{c.name_en}</td>
+                    <td className="table-td font-semibold text-gray-900">{c.name_ar}</td>
+                    <td className="table-td text-gray-600 text-xs font-medium">{c.min_age || 0} – {c.max_age || '∞'} yrs</td>
                   </tr>
                 ))}
               </tbody>

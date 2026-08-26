@@ -43,9 +43,6 @@ function getInitials(name?: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
-const avatarColors = ['#f0c060', '#00d88a', '#5b8df5', '#f56b7e', '#a78bfa', '#38bdf8']
-function avatarColor(id: number) { return avatarColors[id % avatarColors.length] }
-
 export default function StudentsClient({
   initialData, institutions, categories, regions, dict, locale, token
 }: StudentsClientProps) {
@@ -65,13 +62,10 @@ export default function StudentsClient({
   const { register: regReject, handleSubmit: handleReject, reset: resetReject, formState: { errors: errReject, isSubmitting: isSubReject } } = useForm<{ rejection_reason: string }>({ resolver: zodResolver(rejectSchema) })
   const { register: regReassign, handleSubmit: handleReassign, reset: resetReassign, watch, formState: { isSubmitting: isSubReassign } } = useForm<{ category_id: string }>({ resolver: zodResolver(reassignSchema) })
 
-  const selectedCategoryId = watch('category_id')
-
   const instMap = useMemo(() => Object.fromEntries(institutions.map(i => [i.id, i])), [institutions])
   const catMap  = useMemo(() => Object.fromEntries(categories.map(c => [c.id, c])), [categories])
   const regMap  = useMemo(() => Object.fromEntries(regions.map(r => [r.id, r])), [regions])
 
-  // Stats
   const totalStudents   = data.length
   const pendingStudents = data.filter(s => s.review_status === 'PENDING_REVIEW').length
   const approvedStudents = data.filter(s => s.review_status === 'APPROVED').length
@@ -106,7 +100,7 @@ export default function StudentsClient({
     let age = today.getFullYear() - dob.getFullYear()
     const m = today.getMonth() - dob.getMonth()
     if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
-    return (cat.min_age && age < cat.min_age) || (cat.max_age && age > cat.max_age)
+    return Boolean((cat.min_age && age < cat.min_age) || (cat.max_age && age > cat.max_age))
   }
 
   const onReassignSubmit = async (formData: { category_id: string }) => {
@@ -131,24 +125,16 @@ export default function StudentsClient({
   const columns = [
     columnHelper.accessor('full_name', {
       header: ({ column }) => (
-        <button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider" style={{ color: 'rgba(160,160,192,0.7)' }}>
+        <button onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider text-gray-500 cursor-pointer">
           {t.col_name} <ArrowUpDown size={12} />
         </button>
       ),
       cell: info => (
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold"
-            style={{
-              background: `${avatarColor(info.row.original.id)}18`,
-              border: `1px solid ${avatarColor(info.row.original.id)}33`,
-              color: avatarColor(info.row.original.id),
-              fontFamily: 'var(--font-display)',
-            }}
-          >
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold shrink-0">
             {getInitials(info.getValue())}
           </div>
-          <span className="font-semibold text-sm" style={{ color: '#f0f0ff', fontFamily: 'var(--font-display)' }}>
+          <span className="font-semibold text-sm text-gray-900">
             {info.getValue()}
           </span>
         </div>
@@ -158,12 +144,12 @@ export default function StudentsClient({
       header: t.col_category,
       cell: info => {
         const cat = catMap[info.getValue()]
-        return <span style={{ color: 'rgba(240,240,255,0.75)' }}>{cat ? (isAr ? cat.name_ar : cat.name_en) : '—'}</span>
+        return <span className="text-gray-700 text-xs font-medium">{cat ? (isAr ? cat.name_ar : cat.name_en) : '—'}</span>
       }
     }),
     columnHelper.accessor('institution_id', {
       header: t.col_institution,
-      cell: info => <span style={{ color: 'rgba(240,240,255,0.75)' }}>{instMap[info.getValue()]?.name || '—'}</span>
+      cell: info => <span className="text-gray-700 text-xs">{instMap[info.getValue()]?.name || '—'}</span>
     }),
     columnHelper.accessor(row => {
       const inst = instMap[row.institution_id]
@@ -173,7 +159,7 @@ export default function StudentsClient({
     }, {
       id: 'region',
       header: t.col_region,
-      cell: info => <span style={{ color: 'rgba(240,240,255,0.65)' }}>{info.getValue() || '—'}</span>
+      cell: info => <span className="text-gray-500 text-xs">{info.getValue() || '—'}</span>
     }),
     columnHelper.accessor('review_status', {
       header: t.col_status,
@@ -188,7 +174,7 @@ export default function StudentsClient({
     }),
     columnHelper.accessor('created_at', {
       header: t.col_created,
-      cell: info => <span style={{ color: 'rgba(160,160,192,0.6)', fontSize: '0.8125rem' }}>{formatDate(info.getValue())}</span>
+      cell: info => <span className="text-gray-500 text-xs">{formatDate(info.getValue())}</span>
     }),
     columnHelper.display({
       id: 'actions',
@@ -203,20 +189,14 @@ export default function StudentsClient({
                 <button
                   onClick={() => handleApprove(s.id)}
                   disabled={isApproving}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150"
-                  style={{ background: 'rgba(0,216,138,0.1)', border: '1px solid rgba(0,216,138,0.2)', color: '#00d88a' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,216,138,0.2)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 12px rgba(0,216,138,0.3)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,216,138,0.1)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors cursor-pointer"
                   title={t.approve}
                 >
-                  {isApproving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                  {isApproving ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />}
                 </button>
                 <button
                   onClick={() => { setRejectingId(s.id); resetReject() }}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150"
-                  style={{ background: 'rgba(245,107,126,0.1)', border: '1px solid rgba(245,107,126,0.2)', color: '#f56b7e' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(245,107,126,0.2)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 12px rgba(245,107,126,0.3)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(245,107,126,0.1)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
                   title={t.reject}
                 >
                   <X size={13} />
@@ -225,10 +205,7 @@ export default function StudentsClient({
             )}
             <button
               onClick={() => { setReassigningId(s.id); setShowAgeWarning(false); resetReassign() }}
-              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150"
-              style={{ background: 'rgba(91,141,245,0.1)', border: '1px solid rgba(91,141,245,0.2)', color: '#5b8df5' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(91,141,245,0.2)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 12px rgba(91,141,245,0.3)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(91,141,245,0.1)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+              className="w-7 h-7 rounded-md flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition-colors cursor-pointer"
               title={t.reassign}
             >
               <Edit size={13} />
@@ -251,62 +228,52 @@ export default function StudentsClient({
   })
 
   return (
-    <div className="animate-fade-slide-up">
-      <PageHeader title={t.title} subtitle={`${totalStudents} total students`} />
+    <div className="space-y-6">
+      <PageHeader title={t.title} subtitle={`${totalStudents} total registered contestants`} />
 
-      {/* Stats summary row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-7">
+      {/* Stats summary row matching jamia-admin */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total',    value: totalStudents,    icon: <Users size={14} />,       color: '#a78bfa', bg: 'rgba(167,139,250,0.1)',  border: 'rgba(167,139,250,0.2)' },
-          { label: 'Pending',  value: pendingStudents,  icon: <Clock size={14} />,       color: '#f0c060', bg: 'rgba(240,192,96,0.1)',   border: 'rgba(240,192,96,0.2)' },
-          { label: 'Approved', value: approvedStudents, icon: <CheckCircle size={14} />, color: '#00d88a', bg: 'rgba(0,216,138,0.1)',    border: 'rgba(0,216,138,0.2)' },
-          { label: 'Rejected', value: rejectedStudents, icon: <XCircle size={14} />,     color: '#f56b7e', bg: 'rgba(245,107,126,0.1)',  border: 'rgba(245,107,126,0.2)' },
+          { label: 'Total',    value: totalStudents,    icon: <Users size={15} />,       badge: 'bg-purple-50 text-purple-700 border-purple-200', numColor: 'text-purple-950' },
+          { label: 'Pending',  value: pendingStudents,  icon: <Clock size={15} />,       badge: 'bg-amber-50 text-amber-700 border-amber-200',   numColor: 'text-amber-950' },
+          { label: 'Approved', value: approvedStudents, icon: <CheckCircle size={15} />, badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', numColor: 'text-emerald-950' },
+          { label: 'Rejected', value: rejectedStudents, icon: <XCircle size={15} />,     badge: 'bg-rose-50 text-rose-700 border-rose-200',       numColor: 'text-rose-950' },
         ].map(stat => (
           <div
             key={stat.label}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl"
-            style={{ background: stat.bg, border: `1px solid ${stat.border}` }}
+            className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center justify-between"
           >
-            <span style={{ color: stat.color }}>{stat.icon}</span>
             <div>
-              <p className="text-xl font-bold" style={{ color: stat.color, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{stat.value}</p>
-              <p className="text-xs font-semibold mt-0.5 uppercase tracking-wider" style={{ color: 'rgba(160,160,192,0.6)', fontFamily: 'var(--font-display)' }}>{stat.label}</p>
+              <p className={`text-2xl font-bold font-serif ${stat.numColor}`}>{stat.value}</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-0.5">{stat.label}</p>
+            </div>
+            <div className={`p-2 rounded-lg border ${stat.badge}`}>
+              {stat.icon}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Search */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-5">
-        <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute top-1/2 -translate-y-1/2"
-            style={{ left: '14px', color: 'rgba(160,160,192,0.4)', pointerEvents: 'none' }}
-          />
-          <input
-            type="text"
-            placeholder={t.search_placeholder}
-            value={globalFilter ?? ''}
-            onChange={e => setGlobalFilter(e.target.value)}
-            className="input-field"
-            style={{ paddingLeft: '2.5rem' }}
-          />
-        </div>
+      {/* Search Input */}
+      <div className="relative max-w-md">
+        <Search
+          size={16}
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+        />
+        <input
+          type="text"
+          placeholder={t.search_placeholder}
+          value={globalFilter ?? ''}
+          onChange={e => setGlobalFilter(e.target.value)}
+          className="input-field pl-10"
+        />
       </div>
 
-      {/* Table */}
-      <div
-        className="overflow-hidden rounded-2xl"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
-        }}
-      >
+      {/* Table Card */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
+          <table className="w-full text-left">
+            <thead className="bg-gray-50/80 border-b border-gray-200">
               {table.getHeaderGroups().map(hg => (
                 <tr key={hg.id}>
                   {hg.headers.map(h => (
@@ -317,21 +284,17 @@ export default function StudentsClient({
                 </tr>
               ))}
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {table.getRowModel().rows.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length} className="text-center py-16">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.15)' }}>
-                        <Users size={20} style={{ color: '#a78bfa' }} />
-                      </div>
-                      <p style={{ color: 'rgba(160,160,192,0.5)', fontSize: '0.875rem' }}>No students found</p>
-                    </div>
+                  <td colSpan={columns.length} className="text-center py-12 text-gray-400">
+                    <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm font-medium">No students found</p>
                   </td>
                 </tr>
               ) : (
                 table.getRowModel().rows.map(row => (
-                  <tr key={row.id} className="table-row-hover">
+                  <tr key={row.id} className="hover:bg-gray-50/60 transition-colors">
                     {row.getVisibleCells().map(cell => (
                       <td key={cell.id} className="table-td">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -352,7 +315,7 @@ export default function StudentsClient({
         title={t.reject_title}
         variant="danger"
       >
-        <form onSubmit={handleReject(onRejectSubmit)} noValidate className="space-y-5">
+        <form onSubmit={handleReject(onRejectSubmit)} noValidate className="space-y-4">
           <div>
             <label className="label">{t.reject_reason_label}</label>
             <textarea
@@ -362,12 +325,12 @@ export default function StudentsClient({
             />
             {errReject.rejection_reason && <p className="error-text">Reason required (min 5 chars)</p>}
           </div>
-          <div className="flex gap-3">
-            <button type="submit" disabled={isSubReject} className="btn-danger flex-1">
-              {isSubReject ? <><Loader2 size={15} className="animate-spin" /> Rejecting...</> : t.reject_confirm}
-            </button>
-            <button type="button" onClick={() => setRejectingId(null)} className="btn-ghost">
+          <div className="flex gap-3 justify-end pt-2">
+            <button type="button" onClick={() => setRejectingId(null)} className="btn-secondary">
               {tc.cancel}
+            </button>
+            <button type="submit" disabled={isSubReject} className="btn-primary !bg-rose-700 hover:!bg-rose-800">
+              {isSubReject ? <><Loader2 size={15} className="animate-spin" /> Rejecting...</> : t.reject_confirm}
             </button>
           </div>
         </form>
@@ -380,36 +343,32 @@ export default function StudentsClient({
         title={t.reassign_title}
         variant="warning"
       >
-        <form onSubmit={handleReassign(onReassignSubmit)} noValidate className="space-y-5">
+        <form onSubmit={handleReassign(onReassignSubmit)} noValidate className="space-y-4">
           <div>
             <label className="label">{t.reassign_label}</label>
             <select
               {...regReassign('category_id')}
-              className="input-field"
+              className="input-field cursor-pointer"
               onChange={() => setShowAgeWarning(false)}
-              style={{ cursor: 'pointer' }}
             >
-              <option value="">Select...</option>
+              <option value="">Select Category...</option>
               {categories.map(c => (
                 <option key={c.id} value={c.id}>{isAr ? c.name_ar : c.name_en}</option>
               ))}
             </select>
           </div>
           {showAgeWarning && (
-            <div
-              className="rounded-xl p-4 flex items-start gap-3 text-sm"
-              style={{ background: 'rgba(240,192,96,0.08)', border: '1px solid rgba(240,192,96,0.25)', color: '#f0c060' }}
-            >
-              <span className="text-base leading-none mt-0.5">⚠</span>
+            <div className="rounded-lg p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2">
+              <span className="font-bold">⚠️</span>
               <span>{t.reassign_age_warning}</span>
             </div>
           )}
-          <div className="flex gap-3">
-            <button type="submit" disabled={isSubReassign} className="btn-primary flex-1">
-              {isSubReassign ? <><Loader2 size={15} className="animate-spin" /> Saving...</> : t.reassign_confirm}
-            </button>
-            <button type="button" onClick={() => setReassigningId(null)} className="btn-ghost">
+          <div className="flex gap-3 justify-end pt-2">
+            <button type="button" onClick={() => setReassigningId(null)} className="btn-secondary">
               {tc.cancel}
+            </button>
+            <button type="submit" disabled={isSubReassign} className="btn-primary">
+              {isSubReassign ? <><Loader2 size={15} className="animate-spin" /> Saving...</> : t.reassign_confirm}
             </button>
           </div>
         </form>

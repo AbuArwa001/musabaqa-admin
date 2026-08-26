@@ -17,13 +17,6 @@ const rejectSchema = z.object({ rejection_reason: z.string().min(5) })
 
 type StatusFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
 
-const filterMeta: Record<StatusFilter, { color: string; bg: string; border: string; activeBg: string }> = {
-  ALL:      { color: '#a78bfa', bg: 'rgba(167,139,250,0.06)', border: 'rgba(167,139,250,0.15)', activeBg: 'rgba(167,139,250,0.15)' },
-  PENDING:  { color: '#f0c060', bg: 'rgba(240,192,96,0.06)',  border: 'rgba(240,192,96,0.15)',  activeBg: 'rgba(240,192,96,0.15)' },
-  APPROVED: { color: '#00d88a', bg: 'rgba(0,216,138,0.06)',   border: 'rgba(0,216,138,0.15)',   activeBg: 'rgba(0,216,138,0.15)' },
-  REJECTED: { color: '#f56b7e', bg: 'rgba(245,107,126,0.06)', border: 'rgba(245,107,126,0.15)', activeBg: 'rgba(245,107,126,0.15)' },
-}
-
 export default function InstitutionsClient({
   initialData, regions, dict, locale, token,
 }: {
@@ -77,38 +70,28 @@ export default function InstitutionsClient({
   }
 
   return (
-    <div className="animate-fade-slide-up">
+    <div className="space-y-6">
       <PageHeader
         title={t.title}
-        subtitle={`${data.length} total institutions`}
+        subtitle={`${data.length} total registered Madrasas and institutions`}
       />
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      {/* Filter Tabs matching jamia-admin */}
+      <div className="flex flex-wrap gap-2">
         {filters.map(f => {
-          const m = filterMeta[f]
           const active = filter === f
           return (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
-              style={{
-                background: active ? m.activeBg : m.bg,
-                border: `1px solid ${active ? m.color + '40' : m.border}`,
-                color: active ? m.color : 'rgba(160,160,192,0.65)',
-                boxShadow: active ? `0 0 16px ${m.color}20` : 'none',
-                fontFamily: 'var(--font-display)',
-              }}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer border ${
+                active 
+                  ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm' 
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+              }`}
             >
-              {filterLabels[f]}
-              <span
-                className="text-xs px-1.5 py-0.5 rounded-md font-bold"
-                style={{
-                  background: active ? `${m.color}25` : 'rgba(255,255,255,0.06)',
-                  color: active ? m.color : 'rgba(160,160,192,0.5)',
-                }}
-              >
+              <span>{filterLabels[f]}</span>
+              <span className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'}`}>
                 {filterCounts[f]}
               </span>
             </button>
@@ -116,80 +99,56 @@ export default function InstitutionsClient({
         })}
       </div>
 
-      {/* Table */}
-      <div
-        className="overflow-hidden rounded-2xl"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
-        }}
-      >
+      {/* Table Card */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
+          <table className="w-full text-left">
+            <thead className="bg-gray-50/80 border-b border-gray-200">
               <tr>
                 {[t.col_name, t.col_type, t.col_region, t.col_status, t.col_created, t.col_actions].map(h => (
                   <th key={h} className="table-th">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.15)' }}>
-                        <Building2 size={20} style={{ color: '#a78bfa' }} />
-                      </div>
-                      <p style={{ color: 'rgba(160,160,192,0.5)', fontSize: '0.875rem' }}>No institutions found</p>
-                    </div>
+                  <td colSpan={6} className="py-12 text-center text-gray-400">
+                    <Building2 className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm font-medium">No institutions found</p>
                   </td>
                 </tr>
               ) : filtered.map(inst => (
-                <tr key={inst.id} className="table-row-hover">
-                  <td className="table-td">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center"
-                        style={{ background: 'rgba(240,192,96,0.1)', border: '1px solid rgba(240,192,96,0.2)' }}
-                      >
-                        <Building2 size={14} style={{ color: '#f0c060' }} />
+                <tr key={inst.id} className="hover:bg-gray-50/60 transition-colors">
+                  <td className="table-td font-medium text-gray-900">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-[#c99335]">
+                        <Building2 size={14} />
                       </div>
-                      <span className="font-semibold text-sm" style={{ color: '#f0f0ff', fontFamily: 'var(--font-display)' }}>
-                        {inst.name}
-                      </span>
+                      <span className="font-semibold text-gray-900">{inst.name}</span>
                     </div>
                   </td>
                   <td className="table-td">
-                    <span
-                      className="text-xs font-semibold px-2.5 py-1 rounded-lg"
-                      style={{ background: 'rgba(91,141,245,0.1)', color: '#5b8df5', border: '1px solid rgba(91,141,245,0.2)', fontFamily: 'var(--font-display)' }}
-                    >
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-200">
                       {inst.type}
                     </span>
                   </td>
-                  <td className="table-td">
-                    <span style={{ color: 'rgba(240,240,255,0.65)' }}>
-                      {inst.region_id ? regionMap[inst.region_id] || '—' : '—'}
-                    </span>
+                  <td className="table-td text-gray-600 text-xs font-medium">
+                    {inst.region_id ? regionMap[inst.region_id] || '—' : '—'}
                   </td>
                   <td className="table-td">
                     <span className={inst.status === 'APPROVED' ? 'badge-approved' : inst.status === 'REJECTED' ? 'badge-rejected' : 'badge-pending'}>
                       {inst.status}
                     </span>
                   </td>
-                  <td className="table-td">
-                    <span style={{ color: 'rgba(160,160,192,0.6)', fontSize: '0.8125rem' }}>{formatDate(inst.created_at)}</span>
+                  <td className="table-td text-xs text-gray-500">
+                    {formatDate(inst.created_at)}
                   </td>
                   <td className="table-td">
                     <div className="flex items-center gap-1.5">
                       <Link
                         href={`/${locale}/dashboard/institutions/${inst.id}`}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150"
-                        style={{ background: 'rgba(91,141,245,0.1)', border: '1px solid rgba(91,141,245,0.2)', color: '#5b8df5' }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(91,141,245,0.2)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 12px rgba(91,141,245,0.3)' }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(91,141,245,0.1)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+                        className="w-7 h-7 rounded-md flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 transition-colors"
                         title={t.view_detail}
                       >
                         <Eye size={13} />
@@ -199,20 +158,14 @@ export default function InstitutionsClient({
                           <button
                             onClick={() => handleApprove(inst.id)}
                             disabled={approvingId === inst.id}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150"
-                            style={{ background: 'rgba(0,216,138,0.1)', border: '1px solid rgba(0,216,138,0.2)', color: '#00d88a' }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,216,138,0.2)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 12px rgba(0,216,138,0.3)' }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,216,138,0.1)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors cursor-pointer"
                             title={t.approve}
                           >
-                            {approvingId === inst.id ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                            {approvingId === inst.id ? <Loader2 size={12} className="animate-spin" /> : <Check size={13} />}
                           </button>
                           <button
                             onClick={() => { setRejectingId(inst.id); reset() }}
-                            className="w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150"
-                            style={{ background: 'rgba(245,107,126,0.1)', border: '1px solid rgba(245,107,126,0.2)', color: '#f56b7e' }}
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(245,107,126,0.2)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 12px rgba(245,107,126,0.3)' }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(245,107,126,0.1)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+                            className="w-7 h-7 rounded-md flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
                             title={t.reject}
                           >
                             <X size={13} />
@@ -235,7 +188,7 @@ export default function InstitutionsClient({
         title={t.reject_title}
         variant="danger"
       >
-        <form onSubmit={handleSubmit(onRejectSubmit)} noValidate className="space-y-5">
+        <form onSubmit={handleSubmit(onRejectSubmit)} noValidate className="space-y-4">
           <div>
             <label className="label">{t.reject_reason_label}</label>
             <textarea
@@ -246,12 +199,12 @@ export default function InstitutionsClient({
             />
             {errors.rejection_reason && <p className="error-text">Reason required (min 5 chars)</p>}
           </div>
-          <div className="flex gap-3">
-            <button type="submit" disabled={isSubmitting} className="btn-danger flex-1">
-              {isSubmitting ? <><Loader2 size={15} className="animate-spin" /> Rejecting...</> : t.reject_confirm}
-            </button>
-            <button type="button" onClick={() => { setRejectingId(null); reset() }} className="btn-ghost">
+          <div className="flex gap-3 justify-end pt-2">
+            <button type="button" onClick={() => { setRejectingId(null); reset() }} className="btn-secondary">
               {dict.common.cancel}
+            </button>
+            <button type="submit" disabled={isSubmitting} className="btn-primary !bg-rose-700 hover:!bg-rose-800">
+              {isSubmitting ? <><Loader2 size={15} className="animate-spin" /> Rejecting...</> : t.reject_confirm}
             </button>
           </div>
         </form>

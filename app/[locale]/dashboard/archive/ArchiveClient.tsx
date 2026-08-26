@@ -12,6 +12,8 @@ import {
 import type { Dict } from '@/lib/dictionaries'
 import { formatDate } from '@/lib/utils'
 import { Search, RotateCcw, Trash2, Mail, Edit } from 'lucide-react'
+import PageHeader from '@/components/PageHeader'
+import Modal from '@/components/Modal'
 
 export default function ArchiveClient({ initialData, dict, locale, token }: { initialData: StudentRead[], dict: Dict, locale: string, token: string }) {
   const t = dict.archive
@@ -75,20 +77,20 @@ export default function ArchiveClient({ initialData, dict, locale, token }: { in
     colHelper.display({
       id: 'select',
       header: ({ table }) => (
-        <input type="checkbox" checked={table.getIsAllRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} className="w-4 h-4 rounded border-white/20" />
+        <input type="checkbox" checked={table.getIsAllRowsSelected()} onChange={table.getToggleAllRowsSelectedHandler()} className="w-4 h-4 rounded border-gray-300 cursor-pointer" />
       ),
       cell: ({ row }) => (
-        <input type="checkbox" checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} className="w-4 h-4 rounded border-white/20" />
+        <input type="checkbox" checked={row.getIsSelected()} onChange={row.getToggleSelectedHandler()} className="w-4 h-4 rounded border-gray-300 cursor-pointer" />
       )
     }),
-    colHelper.accessor('full_name', { header: t.col_name, cell: info => <span className="font-medium text-white">{info.getValue()}</span> }),
+    colHelper.accessor('full_name', { header: t.col_name, cell: info => <span className="font-semibold text-gray-900">{info.getValue()}</span> }),
     colHelper.accessor(r => r.deletion_reason || r.rejection_reason || '—', { 
       id: 'reason', header: t.col_reason, 
       cell: info => (
         <div className="flex items-center gap-2 group">
-          <span>{info.getValue()}</span>
-          <button onClick={() => { setEditReasonId(info.row.original.id); setNewReason(info.getValue() === '—' ? '' : info.getValue()) }} className="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-white transition-opacity">
-            <Edit size={14} />
+          <span className="text-gray-600 text-xs">{info.getValue()}</span>
+          <button onClick={() => { setEditReasonId(info.row.original.id); setNewReason(info.getValue() === '—' ? '' : info.getValue()) }} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-700 transition-opacity cursor-pointer">
+            <Edit size={13} />
           </button>
         </div>
       )
@@ -96,21 +98,21 @@ export default function ArchiveClient({ initialData, dict, locale, token }: { in
     colHelper.accessor('regret_email_sent', {
       header: t.col_regret,
       cell: info => info.getValue() ? (
-        <span className="text-emerald-400 text-xs px-2 py-1 bg-emerald-500/10 rounded-full">{tc.yes}</span>
+        <span className="badge-approved">{tc.yes}</span>
       ) : (
-        <span className="text-amber-400 text-xs px-2 py-1 bg-amber-500/10 rounded-full">{tc.no}</span>
+        <span className="badge-pending">{tc.no}</span>
       )
     }),
-    colHelper.accessor(r => r.archived_at || r.created_at, { header: t.col_archived_at, cell: info => formatDate(info.getValue()) }),
+    colHelper.accessor(r => r.archived_at || r.created_at, { header: t.col_archived_at, cell: info => <span className="text-gray-500 text-xs">{formatDate(info.getValue())}</span> }),
     colHelper.display({
       id: 'actions', header: tc.actions,
       cell: ({ row }) => {
         const s = row.original
         return (
-          <div className="flex items-center gap-2">
-            <button onClick={() => handleRestore(s.id)} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" title={t.restore}><RotateCcw size={15} /></button>
-            <button onClick={() => handleSendRegret(s.id)} className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" title={t.send_regret}><Mail size={15} /></button>
-            <button onClick={() => setConfirmDeleteId(s.id)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20" title={t.delete_permanent}><Trash2 size={15} /></button>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => handleRestore(s.id)} className="w-7 h-7 rounded-md flex items-center justify-center bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors cursor-pointer" title={t.restore}><RotateCcw size={13} /></button>
+            <button onClick={() => handleSendRegret(s.id)} className="w-7 h-7 rounded-md flex items-center justify-center bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 transition-colors cursor-pointer" title={t.send_regret}><Mail size={13} /></button>
+            <button onClick={() => setConfirmDeleteId(s.id)} className="w-7 h-7 rounded-md flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer" title={t.delete_permanent}><Trash2 size={13} /></button>
           </div>
         )
       }
@@ -127,27 +129,28 @@ export default function ArchiveClient({ initialData, dict, locale, token }: { in
   })
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-stone-400 mb-8">{t.title}</h1>
+    <div className="space-y-6">
+      <PageHeader title={t.title} subtitle="Manage deleted and rejected student applications" />
       
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-        <div className="kpi-card shadow-[0_0_20px_rgba(255,255,255,0.05)]">
-          <p className="text-3xl font-bold text-white">{data.length}</p>
-          <p className="text-stone-400 text-sm">{t.kpi_total}</p>
+      {/* Stats row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <p className="text-2xl font-bold font-serif text-gray-900">{data.length}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold mt-1">{t.kpi_total}</p>
         </div>
-        <div className="kpi-card shadow-[0_0_20px_rgba(16,185,129,0.05)] border-emerald-500/20">
-          <p className="text-3xl font-bold text-emerald-400">{data.filter(s => s.regret_email_sent).length}</p>
-          <p className="text-emerald-500/70 text-sm">{t.kpi_regret_sent}</p>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <p className="text-2xl font-bold font-serif text-emerald-700">{data.filter(s => s.regret_email_sent).length}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold mt-1">{t.kpi_regret_sent}</p>
         </div>
-        <div className="kpi-card shadow-[0_0_20px_rgba(245,158,11,0.05)] border-amber-500/20">
-          <p className="text-3xl font-bold text-amber-400">{data.filter(s => !s.regret_email_sent).length}</p>
-          <p className="text-amber-500/70 text-sm">{t.kpi_regret_pending}</p>
+        <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <p className="text-2xl font-bold font-serif text-amber-700">{data.filter(s => !s.regret_email_sent).length}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold mt-1">{t.kpi_regret_pending}</p>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div className="relative w-full sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" size={18} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input type="text" placeholder={tc.search} value={globalFilter} onChange={e => setGlobalFilter(e.target.value)} className="input-field pl-10" />
         </div>
         {Object.keys(rowSelection).length > 0 && (
@@ -157,57 +160,56 @@ export default function ArchiveClient({ initialData, dict, locale, token }: { in
         )}
       </div>
 
-      <div className="glass overflow-hidden">
+      {/* Table Card */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-white/10 bg-black/20">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50/80 border-b border-gray-200">
               {table.getHeaderGroups().map(hg => (
                 <tr key={hg.id}>
                   {hg.headers.map(h => <th key={h.id} className="table-th">{flexRender(h.column.columnDef.header, h.getContext())}</th>)}
                 </tr>
               ))}
             </thead>
-            <tbody>
-              {table.getRowModel().rows.map(row => (
-                <tr key={row.id} className="table-row-hover border-b border-white/5 last:border-0">
-                  {row.getVisibleCells().map(cell => <td key={cell.id} className="table-td">{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}
-                </tr>
-              ))}
+            <tbody className="divide-y divide-gray-100">
+              {table.getRowModel().rows.length === 0 ? (
+                <tr><td colSpan={columns.length} className="text-center py-12 text-gray-400 text-sm">No archived records found</td></tr>
+              ) : (
+                table.getRowModel().rows.map(row => (
+                  <tr key={row.id} className="hover:bg-gray-50/60 transition-colors">
+                    {row.getVisibleCells().map(cell => <td key={cell.id} className="table-td">{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {editReasonId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="glass p-8 w-full max-w-md">
-            <h2 className="text-xl font-bold text-white mb-6">{t.edit_reason}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="label">{t.edit_reason_label}</label>
-                <textarea value={newReason} onChange={e => setNewReason(e.target.value)} rows={3} className="input-field resize-none" />
-              </div>
-              <div className="flex gap-3">
-                <button onClick={handleEditReason} className="btn-primary flex-1">{t.edit_reason_save}</button>
-                <button onClick={() => setEditReasonId(null)} className="btn-ghost">{tc.cancel}</button>
-              </div>
-            </div>
+      {/* Edit Reason Modal */}
+      <Modal isOpen={!!editReasonId} onClose={() => setEditReasonId(null)} title={t.edit_reason}>
+        <div className="space-y-4">
+          <div>
+            <label className="label">{t.edit_reason_label}</label>
+            <textarea value={newReason} onChange={e => setNewReason(e.target.value)} rows={3} className="input-field resize-none" />
+          </div>
+          <div className="flex gap-3 justify-end pt-2">
+            <button onClick={() => setEditReasonId(null)} className="btn-secondary">{tc.cancel}</button>
+            <button onClick={handleEditReason} className="btn-primary">{t.edit_reason_save}</button>
           </div>
         </div>
-      )}
+      </Modal>
 
-      {confirmDeleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="glass p-8 w-full max-w-md border-red-500/30">
-            <h2 className="text-xl font-bold text-white mb-2">{t.confirm_permanent_title}</h2>
-            <p className="text-stone-400 text-sm mb-6">{t.confirm_permanent_body}</p>
-            <div className="flex gap-3">
-              <button onClick={() => handlePermanentDelete(confirmDeleteId)} className="btn-danger flex-1">{t.confirm_permanent_button}</button>
-              <button onClick={() => setConfirmDeleteId(null)} className="btn-ghost">{tc.cancel}</button>
-            </div>
+      {/* Confirm Permanent Delete Modal */}
+      <Modal isOpen={!!confirmDeleteId} onClose={() => setConfirmDeleteId(null)} title={t.confirm_permanent_title} variant="danger">
+        <div className="space-y-4">
+          <p className="text-gray-600 text-sm">{t.confirm_permanent_body}</p>
+          <div className="flex gap-3 justify-end pt-2">
+            <button onClick={() => setConfirmDeleteId(null)} className="btn-secondary">{tc.cancel}</button>
+            <button onClick={() => confirmDeleteId && handlePermanentDelete(confirmDeleteId)} className="btn-primary !bg-rose-700 hover:!bg-rose-800">{t.confirm_permanent_button}</button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

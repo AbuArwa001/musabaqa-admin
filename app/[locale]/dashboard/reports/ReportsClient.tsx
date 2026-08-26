@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { getReportUrl, startBulkDossiers, getDossierJobStatus, type StudentRead, type BulkDossierJob } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
-import { FileDown, Download, FolderArchive, RefreshCcw } from 'lucide-react'
+import { FileDown, Download, FolderArchive } from 'lucide-react'
 import { toast } from 'sonner'
+import PageHeader from '@/components/PageHeader'
 
 export default function ReportsClient({ students, dict, locale, token }: { students: StudentRead[], dict: Dict, locale: string, token: string }) {
   const t = dict.reports
@@ -47,104 +48,125 @@ export default function ReportsClient({ students, dict, locale, token }: { stude
   }
 
   const handleDownloadReport = (type: 'print-ready' | 'power-bi' | 'granular') => {
-    // In a real app, we'd trigger a download using the token.
-    // For demo, we just open the URL (requires backend to accept cookie or query param auth if GET)
     toast.success('Initiating download...')
     window.open(getReportUrl(type), '_blank')
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-stone-400 mb-8">{t.title}</h1>
+    <div className="space-y-6">
+      <PageHeader title={t.title} subtitle="Export datasets, generate student dossiers and competition sheets" />
 
-      <div className="flex flex-wrap gap-2 mb-6 border-b border-white/10 pb-4">
-        <button onClick={() => setActiveTab('excel')} className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${activeTab === 'excel' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-stone-400 hover:text-white'}`}>
-          <FileDown size={16} /> {t.tab_excel}
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
+        <button
+          onClick={() => setActiveTab('excel')}
+          className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border ${
+            activeTab === 'excel'
+              ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+          }`}
+        >
+          <FileDown size={14} /> {t.tab_excel}
         </button>
-        <button onClick={() => setActiveTab('dossier')} className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${activeTab === 'dossier' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-stone-400 hover:text-white'}`}>
-          <FolderArchive size={16} /> {t.tab_dossier}
+        <button
+          onClick={() => setActiveTab('dossier')}
+          className={`px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer border ${
+            activeTab === 'dossier'
+              ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm'
+              : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
+          }`}
+        >
+          <FolderArchive size={14} /> {t.tab_dossier}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 gap-6">
         
         {activeTab === 'excel' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="glass p-8 flex flex-col items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                <FileDown size={24} />
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-between hover:border-emerald-500 transition-colors">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
+                  <FileDown size={20} />
+                </div>
+                <div>
+                  <h2 className="font-serif text-lg font-bold text-gray-900">{t.excel_power_bi}</h2>
+                  <p className="text-gray-500 text-xs mt-1">A normalized, flattened dataset optimized for Power BI and Tableau ingestion.</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-white mb-2">{t.excel_power_bi}</h2>
-                <p className="text-stone-400 text-sm">A normalized, flattened dataset optimized for Power BI and Tableau ingestion.</p>
+              <div className="pt-6">
+                <button onClick={() => handleDownloadReport('power-bi')} className="btn-primary text-xs flex items-center gap-2">
+                  <Download size={14} /> {t.excel_download}
+                </button>
               </div>
-              <button onClick={() => handleDownloadReport('power-bi')} className="btn-primary mt-auto flex items-center gap-2">
-                <Download size={16} /> {t.excel_download}
-              </button>
             </div>
             
-            <div className="glass p-8 flex flex-col items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                <FileDown size={24} />
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col justify-between hover:border-emerald-500 transition-colors">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
+                  <FileDown size={20} />
+                </div>
+                <div>
+                  <h2 className="font-serif text-lg font-bold text-gray-900">{t.excel_granular}</h2>
+                  <p className="text-gray-500 text-xs mt-1">Highly detailed export including every deduction event, timestamp, and panel member vote.</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-white mb-2">{t.excel_granular}</h2>
-                <p className="text-stone-400 text-sm">Highly detailed export including every deduction event, timestamp, and panel member vote.</p>
+              <div className="pt-6">
+                <button onClick={() => handleDownloadReport('granular')} className="btn-primary text-xs flex items-center gap-2">
+                  <Download size={14} /> {t.excel_download}
+                </button>
               </div>
-              <button onClick={() => handleDownloadReport('granular')} className="btn-primary mt-auto flex items-center gap-2">
-                <Download size={16} /> {t.excel_download}
-              </button>
             </div>
           </div>
         )}
 
         {activeTab === 'dossier' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="glass p-6">
-              <h2 className="text-lg font-bold text-white mb-4">{t.dossier_select}</h2>
-              <div className="max-h-96 overflow-y-auto pr-2 space-y-2">
-                <label className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer border border-white/5 bg-black/20">
-                  <input type="checkbox" checked={selectedStudents.length === students.length} onChange={() => setSelectedStudents(selectedStudents.length === students.length ? [] : students.map(s => s.id))} className="w-4 h-4 rounded border-white/20" />
-                  <span className="text-white font-medium">Select All ({students.length})</span>
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <h2 className="font-serif font-bold text-sm text-gray-900 mb-3">{t.dossier_select}</h2>
+              <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 border border-gray-100 rounded-lg">
+                <label className="flex items-center gap-3 p-3 bg-gray-50/80 hover:bg-gray-100/80 cursor-pointer transition-colors">
+                  <input type="checkbox" checked={selectedStudents.length === students.length && students.length > 0} onChange={() => setSelectedStudents(selectedStudents.length === students.length ? [] : students.map(s => s.id))} className="w-4 h-4 rounded border-gray-300" />
+                  <span className="text-gray-900 font-bold text-xs">Select All ({students.length})</span>
                 </label>
                 {students.map(s => (
-                  <label key={s.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 cursor-pointer border border-transparent transition-colors">
-                    <input type="checkbox" checked={selectedStudents.includes(s.id)} onChange={() => toggleStudent(s.id)} className="w-4 h-4 rounded border-white/20" />
-                    <span className="text-stone-300">{s.full_name}</span>
+                  <label key={s.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <input type="checkbox" checked={selectedStudents.includes(s.id)} onChange={() => toggleStudent(s.id)} className="w-4 h-4 rounded border-gray-300" />
+                    <span className="text-gray-700 text-xs font-medium">{s.full_name}</span>
                   </label>
                 ))}
               </div>
-              <div className="mt-6">
-                <button onClick={handleGenerateDossiers} disabled={selectedStudents.length === 0 || (jobStatus?.status === 'PROCESSING')} className="btn-primary w-full flex items-center justify-center gap-2">
-                  <FolderArchive size={16} /> {t.dossier_generate} ({selectedStudents.length})
+              <div className="mt-5">
+                <button onClick={handleGenerateDossiers} disabled={selectedStudents.length === 0 || (jobStatus?.status === 'PROCESSING')} className="btn-primary w-full text-xs flex items-center justify-center gap-2">
+                  <FolderArchive size={14} /> {t.dossier_generate} ({selectedStudents.length})
                 </button>
               </div>
             </div>
 
             {jobStatus && (
-              <div className="glass p-6 h-fit border-amber-500/20 shadow-[0_0_20px_rgba(201,147,53,0.05)]">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-bold text-white">{t.dossier_progress}</h2>
-                  <div className="text-xs px-2 py-1 bg-white/10 rounded text-stone-300 font-mono uppercase tracking-wider">{jobStatus.status}</div>
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-serif font-bold text-sm text-gray-900">{t.dossier_progress}</h2>
+                  <div className="text-xs px-2 py-0.5 bg-gray-100 rounded font-semibold text-gray-700 uppercase tracking-wider">{jobStatus.status}</div>
                 </div>
                 
                 <div className="space-y-2 mb-6">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-stone-400">Processed</span>
-                    <span className="text-white font-medium">{jobStatus.completed + jobStatus.failed} / {jobStatus.total}</span>
+                  <div className="flex justify-between text-xs text-gray-600">
+                    <span>Processed</span>
+                    <span className="font-bold text-gray-900">{jobStatus.completed + jobStatus.failed} / {jobStatus.total}</span>
                   </div>
-                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-500 ${jobStatus.status === 'FAILED' ? 'bg-red-500' : 'bg-gradient-to-r from-amber-500 to-amber-400'}`} 
+                      className={`h-full transition-all duration-500 ${jobStatus.status === 'FAILED' ? 'bg-rose-500' : 'bg-emerald-600'}`} 
                       style={{ width: `${jobStatus.total > 0 ? ((jobStatus.completed + jobStatus.failed) / jobStatus.total) * 100 : 0}%` }} 
                     />
                   </div>
                 </div>
 
                 {jobStatus.status === 'COMPLETED' && jobStatus.zip_url && (
-                  <div className="pt-4 border-t border-white/10 text-center">
-                    <a href={jobStatus.zip_url} target="_blank" rel="noopener noreferrer" className="btn-gold w-full flex items-center justify-center gap-2">
-                      <Download size={16} /> {t.dossier_download_zip}
+                  <div className="pt-4 border-t border-gray-100 text-center">
+                    <a href={jobStatus.zip_url} target="_blank" rel="noopener noreferrer" className="btn-gold w-full text-xs flex items-center justify-center gap-2">
+                      <Download size={14} /> {t.dossier_download_zip}
                     </a>
                   </div>
                 )}

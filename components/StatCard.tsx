@@ -7,66 +7,42 @@ interface StatCardProps {
   value: number
   icon: React.ReactNode
   color: 'gold' | 'emerald' | 'sapphire' | 'rose' | 'purple'
+  desc?: string
   animDelay?: number
 }
 
 const colorMap = {
   gold: {
-    accent:   'linear-gradient(90deg, #f0c060, #e8a83a)',
-    iconBg:   'rgba(240,192,96,0.12)',
-    iconColor: '#f0c060',
-    glow:     '0 0 40px rgba(240,192,96,0.15)',
-    border:   'rgba(240,192,96,0.2)',
-    halo:     'rgba(240,192,96,0.25)',
-    text:     '#f0c060',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200',
+    number: 'text-amber-900',
   },
   emerald: {
-    accent:   'linear-gradient(90deg, #00d88a, #00b371)',
-    iconBg:   'rgba(0,216,138,0.12)',
-    iconColor: '#00d88a',
-    glow:     '0 0 40px rgba(0,216,138,0.15)',
-    border:   'rgba(0,216,138,0.2)',
-    halo:     'rgba(0,216,138,0.25)',
-    text:     '#00d88a',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    number: 'text-emerald-950',
   },
   sapphire: {
-    accent:   'linear-gradient(90deg, #5b8df5, #3b5fd8)',
-    iconBg:   'rgba(91,141,245,0.12)',
-    iconColor: '#5b8df5',
-    glow:     '0 0 40px rgba(91,141,245,0.15)',
-    border:   'rgba(91,141,245,0.2)',
-    halo:     'rgba(91,141,245,0.25)',
-    text:     '#5b8df5',
+    badge: 'bg-sky-50 text-sky-700 border-sky-200',
+    number: 'text-sky-950',
   },
   rose: {
-    accent:   'linear-gradient(90deg, #f56b7e, #dc2626)',
-    iconBg:   'rgba(245,107,126,0.12)',
-    iconColor: '#f56b7e',
-    glow:     '0 0 40px rgba(245,107,126,0.15)',
-    border:   'rgba(245,107,126,0.2)',
-    halo:     'rgba(245,107,126,0.25)',
-    text:     '#f56b7e',
+    badge: 'bg-rose-50 text-rose-700 border-rose-200',
+    number: 'text-rose-950',
   },
   purple: {
-    accent:   'linear-gradient(90deg, #a78bfa, #7c3aed)',
-    iconBg:   'rgba(167,139,250,0.12)',
-    iconColor: '#a78bfa',
-    glow:     '0 0 40px rgba(167,139,250,0.15)',
-    border:   'rgba(167,139,250,0.2)',
-    halo:     'rgba(167,139,250,0.25)',
-    text:     '#a78bfa',
+    badge: 'bg-purple-50 text-purple-700 border-purple-200',
+    number: 'text-purple-950',
   },
 }
 
-export default function StatCard({ label, value, icon, color, animDelay = 0 }: StatCardProps) {
-  const c = colorMap[color]
+export default function StatCard({ label, value, icon, color, desc, animDelay = 0 }: StatCardProps) {
+  const c = colorMap[color] || colorMap.gold
   const numberRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     const el = numberRef.current
     if (!el) return
     const target = value
-    const duration = 900
+    const duration = 800
     const start = Date.now() + animDelay
     let frame: number
 
@@ -75,7 +51,7 @@ export default function StatCard({ label, value, icon, color, animDelay = 0 }: S
       if (now < start) { frame = requestAnimationFrame(tick); return }
       const elapsed = now - start
       const progress = Math.min(elapsed / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3) // ease-out-cubic
+      const eased = 1 - Math.pow(1 - progress, 3)
       el.textContent = Math.round(eased * target).toString()
       if (progress < 1) frame = requestAnimationFrame(tick)
     }
@@ -84,49 +60,22 @@ export default function StatCard({ label, value, icon, color, animDelay = 0 }: S
   }, [value, animDelay])
 
   return (
-    <div
-      className="kpi-card group"
-      style={{ boxShadow: c.glow, borderColor: c.border }}
-    >
-      {/* Top accent bar */}
-      <div
-        className="absolute top-0 left-6 right-6 h-px rounded-full"
-        style={{ background: c.accent, opacity: 0.8 }}
-      />
-
-      {/* Icon with halo */}
-      <div className="relative w-12 h-12">
-        {/* Outer halo ring */}
-        <div
-          className="absolute inset-0 rounded-2xl animate-[pulse_3s_ease-in-out_infinite]"
-          style={{ background: c.halo, filter: 'blur(8px)', transform: 'scale(1.3)' }}
-        />
-        <div
-          className="relative w-12 h-12 rounded-2xl flex items-center justify-center"
-          style={{ background: c.iconBg, color: c.iconColor, border: `1px solid ${c.border}` }}
-        >
+    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-emerald-500 transition-all duration-200 flex flex-col justify-between">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider truncate">
+          {label}
+        </span>
+        <div className={`p-2 rounded-lg border ${c.badge} shrink-0`}>
           {icon}
         </div>
       </div>
 
-      {/* Value */}
       <div className="mt-3">
-        <div
-          className="text-5xl font-bold tracking-tight animate-count-up"
-          style={{ color: c.text, animationDelay: `${animDelay}ms`, fontFamily: 'var(--font-display)' }}
-        >
+        <div className={`text-3xl font-bold font-serif ${c.number}`}>
           <span ref={numberRef}>0</span>
         </div>
-        <p className="text-sm font-medium mt-1.5" style={{ color: 'rgba(160,160,192,0.8)', fontFamily: 'var(--font-display)' }}>
-          {label}
-        </p>
+        {desc && <p className="text-xs text-gray-500 mt-1 truncate">{desc}</p>}
       </div>
-
-      {/* Bottom-right decorative glow */}
-      <div
-        className="absolute bottom-0 right-0 w-24 h-24 rounded-full pointer-events-none"
-        style={{ background: c.iconBg, filter: 'blur(20px)', transform: 'translate(30%, 30%)' }}
-      />
     </div>
   )
 }

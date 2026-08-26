@@ -3,12 +3,19 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
 import type { Dict } from '@/lib/dictionaries'
 import type { AdminRole } from '@/lib/auth'
 import {
-  LayoutDashboard, Building2, Users, Archive,
-  Trophy, Radio, Settings, FileBarChart, ScrollText, LogOut, ChevronRight
+  LayoutDashboard, 
+  Building2, 
+  Users, 
+  Archive,
+  Trophy, 
+  Radio, 
+  Settings, 
+  FileBarChart, 
+  ScrollText, 
+  LogOut
 } from 'lucide-react'
 
 interface NavItem {
@@ -21,27 +28,28 @@ interface NavItem {
 
 function getNavItems(locale: string, dict: Dict): NavItem[] {
   return [
-    { href: `/${locale}/dashboard`,              label: dict.nav.dashboard,    icon: <LayoutDashboard size={17} />, roles: ['SUPERADMIN', 'JUDGE', 'MODERATOR'], group: 'Overview' },
-    { href: `/${locale}/dashboard/live`,         label: dict.nav.live,         icon: <Radio size={17} />,           roles: ['SUPERADMIN', 'JUDGE', 'MODERATOR'], group: 'Overview' },
-    { href: `/${locale}/dashboard/institutions`, label: dict.nav.institutions, icon: <Building2 size={17} />,       roles: ['SUPERADMIN', 'MODERATOR'],          group: 'Management' },
-    { href: `/${locale}/dashboard/students`,     label: dict.nav.students,     icon: <Users size={17} />,           roles: ['SUPERADMIN', 'MODERATOR'],          group: 'Management' },
-    { href: `/${locale}/dashboard/rounds`,       label: dict.nav.rounds,       icon: <Trophy size={17} />,          roles: ['SUPERADMIN', 'JUDGE', 'MODERATOR'], group: 'Management' },
-    { href: `/${locale}/dashboard/archive`,      label: dict.nav.archive,      icon: <Archive size={17} />,         roles: ['SUPERADMIN', 'MODERATOR'],          group: 'Management' },
-    { href: `/${locale}/dashboard/reports`,      label: dict.nav.reports,      icon: <FileBarChart size={17} />,    roles: ['SUPERADMIN', 'MODERATOR'],          group: 'System' },
-    { href: `/${locale}/dashboard/audit`,        label: dict.nav.audit,        icon: <ScrollText size={17} />,      roles: ['SUPERADMIN'],                       group: 'System' },
-    { href: `/${locale}/dashboard/settings`,     label: dict.nav.settings,     icon: <Settings size={17} />,        roles: ['SUPERADMIN'],                       group: 'System' },
+    { href: `/${locale}/dashboard`,              label: dict.nav.dashboard,    icon: <LayoutDashboard className="w-4 h-4 text-[#c99335]" />, roles: ['SUPERADMIN', 'JUDGE', 'MODERATOR'], group: 'Main Overview' },
+    { href: `/${locale}/dashboard/live`,         label: dict.nav.live,         icon: <Radio className="w-4 h-4 text-emerald-400" />,           roles: ['SUPERADMIN', 'JUDGE', 'MODERATOR'], group: 'Main Overview' },
+    { href: `/${locale}/dashboard/institutions`, label: dict.nav.institutions, icon: <Building2 className="w-4 h-4 text-sky-400" />,          roles: ['SUPERADMIN', 'MODERATOR'],          group: 'Management' },
+    { href: `/${locale}/dashboard/students`,     label: dict.nav.students,     icon: <Users className="w-4 h-4 text-amber-400" />,             roles: ['SUPERADMIN', 'MODERATOR'],          group: 'Management' },
+    { href: `/${locale}/dashboard/rounds`,       label: dict.nav.rounds,       icon: <Trophy className="w-4 h-4 text-purple-400" />,          roles: ['SUPERADMIN', 'JUDGE', 'MODERATOR'], group: 'Management' },
+    { href: `/${locale}/dashboard/archive`,      label: dict.nav.archive,      icon: <Archive className="w-4 h-4 text-rose-400" />,           roles: ['SUPERADMIN', 'MODERATOR'],          group: 'Management' },
+    { href: `/${locale}/dashboard/reports`,      label: dict.nav.reports,      icon: <FileBarChart className="w-4 h-4 text-teal-400" />,       roles: ['SUPERADMIN', 'MODERATOR'],          group: 'System Administration' },
+    { href: `/${locale}/dashboard/audit`,        label: dict.nav.audit,        icon: <ScrollText className="w-4 h-4 text-amber-400" />,         roles: ['SUPERADMIN'],                       group: 'System Administration' },
+    { href: `/${locale}/dashboard/settings`,     label: dict.nav.settings,     icon: <Settings className="w-4 h-4 text-[#c99335]" />,          roles: ['SUPERADMIN'],                       group: 'System Administration' },
   ]
 }
 
-const roleColors: Record<AdminRole, { bg: string; text: string; border: string }> = {
-  SUPERADMIN: { bg: 'rgba(240,192,96,0.12)',  text: '#f0c060', border: 'rgba(240,192,96,0.25)' },
-  JUDGE:      { bg: 'rgba(91,141,245,0.12)',  text: '#5b8df5', border: 'rgba(91,141,245,0.25)' },
-  MODERATOR:  { bg: 'rgba(0,216,138,0.12)',   text: '#00d88a', border: 'rgba(0,216,138,0.25)' },
-}
-
-function getInitials(name?: string) {
-  if (!name) return '?'
-  return name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase()
+const getRoleBadgeColor = (userRole: AdminRole) => {
+  switch (userRole) {
+    case 'SUPERADMIN':
+      return 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+    case 'JUDGE':
+      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+    case 'MODERATOR':
+    default:
+      return 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+  }
 }
 
 interface SidebarProps {
@@ -57,15 +65,12 @@ export default function Sidebar({ locale, dict, role, userName }: SidebarProps) 
   const items = allItems.filter(item => item.roles.includes(role))
   const isAr = locale === 'ar'
 
-  const rc = roleColors[role]
-
   async function handleLogout() {
     await fetch('/api/logout', { method: 'POST' })
     window.location.href = `/${locale}/login`
   }
 
-  // Group items
-  const groups = ['Overview', 'Management', 'System']
+  const groups = ['Main Overview', 'Management', 'System Administration']
   const grouped = groups.reduce<Record<string, NavItem[]>>((acc, g) => {
     acc[g] = items.filter(i => i.group === g)
     return acc
@@ -73,93 +78,55 @@ export default function Sidebar({ locale, dict, role, userName }: SidebarProps) 
 
   return (
     <aside
-      className={`fixed top-0 ${isAr ? 'right-0' : 'left-0'} h-full w-72 z-40 flex flex-col`}
-      style={{
-        background: 'linear-gradient(180deg, #0d0d1c 0%, #09090f 100%)',
-        borderRight: isAr ? 'none' : '1px solid rgba(255,255,255,0.06)',
-        borderLeft:  isAr ? '1px solid rgba(255,255,255,0.06)' : 'none',
-      }}
+      className={`w-64 bg-[#1a1512] text-white flex flex-col h-full flex-shrink-0 border-r border-[#2d2520] shadow-xl ${
+        isAr ? 'border-r-0 border-l' : ''
+      }`}
     >
-      {/* Top shimmer line */}
-      <div
-        className="absolute top-0 left-0 right-0 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(240,192,96,0.4), transparent)' }}
-      />
-
-      {/* ── Logo ── */}
-      <div className="px-6 py-7">
-        <div className={`flex items-center gap-3.5 ${isAr ? 'flex-row-reverse' : ''}`}>
-          {/* Logo mark */}
-          <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
-            <Image src="/logo.png" alt="Musabaqa Logo" width={48} height={48} className="object-contain" priority />
+      {/* Brand Header */}
+      <div className="p-5 border-b border-[#2d2520] bg-[#120e0c]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#1a1512] to-[#0a0807] border border-[#c99335]/40 flex items-center justify-center p-1.5 shadow-md shrink-0">
+            <Image
+              src="/logo.png"
+              alt="Jamia Mosque Logo"
+              width={32}
+              height={32}
+              className="object-contain"
+              priority
+            />
           </div>
-          <div className={isAr ? 'text-right' : ''}>
-            <p
-              className="font-bold text-base leading-none"
-              style={{
-                background: 'linear-gradient(135deg, #f0c060 0%, #fde68a 60%, #e8a83a 100%)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontFamily: 'var(--font-display)',
-              }}
-            >
-              Musabaqa
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(160,160,192,0.5)', fontFamily: 'var(--font-display)' }}>
-              Admin Portal
+          <div className="min-w-0">
+            <h1 className="font-serif text-base font-bold tracking-tight text-white leading-tight truncate">
+              Jamia Mosque
+            </h1>
+            <p className="text-[10px] text-[#c99335] font-semibold tracking-wider uppercase">
+              Musabaqa Admin CMS
             </p>
           </div>
         </div>
-      </div>
 
-      {/* Divider */}
-      <div className="divider mx-4" />
-
-      {/* ── User Card ── */}
-      <div className="px-4 py-4">
-        <div
-          className={`flex items-center gap-3 px-3 py-3 rounded-2xl ${isAr ? 'flex-row-reverse' : ''}`}
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.07)',
-          }}
-        >
-          {/* Avatar */}
-          <div
-            className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold"
-            style={{
-              background: `linear-gradient(135deg, ${rc.bg.replace('0.12)', '0.3)')} 0%, ${rc.bg.replace('0.12)', '0.15)')} 100%)`,
-              border: `1px solid ${rc.border}`,
-              color: rc.text,
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            {getInitials(userName)}
-          </div>
-          <div className={`flex-1 min-w-0 ${isAr ? 'text-right' : ''}`}>
-            <p className="text-sm font-semibold truncate" style={{ color: '#f0f0ff', fontFamily: 'var(--font-display)' }}>
-              {userName}
-            </p>
-            <span
-              className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
-              style={{ background: rc.bg, color: rc.text, border: `1px solid ${rc.border}`, fontFamily: 'var(--font-display)' }}
-            >
-              {role}
-            </span>
-          </div>
+        {/* User Role Pill */}
+        <div className="mt-3.5 flex items-center justify-between pt-2.5 border-t border-white/10">
+          <span className="text-[11px] text-gray-400 truncate max-w-[110px]" title={userName}>
+            {userName || 'Staff User'}
+          </span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${getRoleBadgeColor(role)}`}>
+            {role}
+          </span>
         </div>
       </div>
 
-      {/* ── Navigation ── */}
-      <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-5">
+      {/* Navigation Menu */}
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
         {groups.map(groupName => {
           const groupItems = grouped[groupName]
           if (!groupItems?.length) return null
           return (
             <div key={groupName}>
-              <p className="section-label mb-2">{groupName}</p>
-              <div className="space-y-0.5">
+              <span className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                {groupName}
+              </span>
+              <ul className="space-y-1">
                 {groupItems.map(item => {
                   const isExact = item.href === `/${locale}/dashboard`
                   const active = isExact
@@ -167,80 +134,35 @@ export default function Sidebar({ locale, dict, role, userName }: SidebarProps) 
                     : pathname.startsWith(item.href)
 
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        'group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                        isAr ? 'flex-row-reverse' : '',
-                        active ? 'active-nav-item' : 'inactive-nav-item'
-                      )}
-                      style={active ? {
-                        background: 'linear-gradient(135deg, rgba(240,192,96,0.12) 0%, rgba(240,192,96,0.06) 100%)',
-                        border: '1px solid rgba(240,192,96,0.2)',
-                        color: '#f0c060',
-                        boxShadow: '0 0 20px rgba(240,192,96,0.08)',
-                      } : {
-                        border: '1px solid transparent',
-                        color: 'rgba(160,160,192,0.7)',
-                      }}
-                      onMouseEnter={e => {
-                        if (!active) {
-                          (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'
-                          ;(e.currentTarget as HTMLElement).style.color = '#f0f0ff'
-                          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'
-                        }
-                      }}
-                      onMouseLeave={e => {
-                        if (!active) {
-                          (e.currentTarget as HTMLElement).style.background = 'transparent'
-                          ;(e.currentTarget as HTMLElement).style.color = 'rgba(160,160,192,0.7)'
-                          ;(e.currentTarget as HTMLElement).style.borderColor = 'transparent'
-                        }
-                      }}
-                    >
-                      <span style={{ color: active ? '#f0c060' : 'rgba(160,160,192,0.5)' }}>
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          active
+                            ? 'bg-white/10 text-white font-semibold shadow-sm'
+                            : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
                         {item.icon}
-                      </span>
-                      <span className="flex-1" style={{ fontFamily: 'var(--font-display)', fontSize: '0.8375rem' }}>
-                        {item.label}
-                      </span>
-                      {active && (
-                        <ChevronRight size={13} style={{ color: 'rgba(240,192,96,0.5)' }} />
-                      )}
-                    </Link>
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    </li>
                   )
                 })}
-              </div>
+              </ul>
             </div>
           )
         })}
       </nav>
 
-      {/* ── Logout ── */}
-      <div className="px-3 py-4">
-        <div className="divider mb-4" />
+      {/* Footer Logout */}
+      <div className="p-4 border-t border-[#2d2520] bg-[#120e0c]">
         <button
           onClick={handleLogout}
-          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 ${isAr ? 'flex-row-reverse' : ''}`}
-          style={{
-            color: 'rgba(245,107,126,0.7)',
-            border: '1px solid transparent',
-            fontFamily: 'var(--font-display)',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(245,107,126,0.08)'
-            ;(e.currentTarget as HTMLElement).style.color = '#f56b7e'
-            ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(245,107,126,0.15)'
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'transparent'
-            ;(e.currentTarget as HTMLElement).style.color = 'rgba(245,107,126,0.7)'
-            ;(e.currentTarget as HTMLElement).style.borderColor = 'transparent'
-          }}
+          className="flex w-full items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-rose-300 bg-rose-950/40 border border-rose-900/50 hover:bg-rose-900/60 rounded-md transition-colors cursor-pointer"
         >
-          <LogOut size={17} />
-          <span className="font-medium">{dict.nav.logout}</span>
+          <LogOut className="w-3.5 h-3.5" />
+          <span>{dict.nav.logout}</span>
         </button>
       </div>
     </aside>

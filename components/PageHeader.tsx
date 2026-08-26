@@ -7,35 +7,27 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, actions, badge }: PageHeaderProps) {
   const badgeColors = {
-    gold:     'bg-[rgba(240,192,96,0.1)] text-[#f0c060] border-[rgba(240,192,96,0.25)]',
-    emerald:  'bg-[rgba(0,216,138,0.1)] text-[#00d88a] border-[rgba(0,216,138,0.25)]',
-    sapphire: 'bg-[rgba(91,141,245,0.1)] text-[#5b8df5] border-[rgba(91,141,245,0.25)]',
-    rose:     'bg-[rgba(245,107,126,0.1)] text-[#f56b7e] border-[rgba(245,107,126,0.25)]',
+    gold:     'bg-amber-50 text-amber-800 border-amber-200',
+    emerald:  'bg-emerald-50 text-emerald-800 border-emerald-200',
+    sapphire: 'bg-sky-50 text-sky-800 border-sky-200',
+    rose:     'bg-rose-50 text-rose-800 border-rose-200',
   }
 
   return (
-    <div className="flex items-start justify-between gap-4 mb-8 animate-fade-slide-up">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
       <div className="space-y-1">
         <div className="flex items-center gap-3">
-          <h1
-            className="text-3xl font-bold tracking-tight"
-            style={{
-              background: 'linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.65) 100%)',
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
             {title}
           </h1>
           {badge && (
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border uppercase tracking-widest ${badgeColors[badge.color ?? 'gold']}`}>
+            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${badgeColors[badge.color ?? 'gold']}`}>
               {badge.label}
             </span>
           )}
         </div>
         {subtitle && (
-          <p className="text-sm" style={{ color: 'rgba(160,160,192,0.7)' }}>
+          <p className="text-sm text-gray-500">
             {subtitle}
           </p>
         )}
