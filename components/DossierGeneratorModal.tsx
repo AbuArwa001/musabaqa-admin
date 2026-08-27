@@ -127,11 +127,11 @@ export default function DossierGeneratorModal({
               <div className="flex items-center gap-2">
                 <h2 className="font-serif font-bold text-lg text-white">Candidate Dossier PDF Generator</h2>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#c99335]/20 text-[#c99335] border border-[#c99335]/30 font-semibold font-mono">
-                  {totalCount} Selected
+                  {totalCount} Selected Candidates
                 </span>
               </div>
               <p className="text-gray-400 text-xs mt-0.5">
-                Real-time official dossier compilation with high-res photo embedding & national ID integration
+                Each candidate dossier contains 2 pages: <strong>Page 1: Contestant Profile</strong> & <strong>Page 2: Attached Identification Document / Birth Certificate</strong>
               </p>
             </div>
           </div>

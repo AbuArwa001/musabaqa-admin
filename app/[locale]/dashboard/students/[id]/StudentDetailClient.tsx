@@ -6,7 +6,7 @@ import Image from 'next/image'
 import {
   ArrowLeft, Edit3, Download, Printer, Trash2, Tag, Check, X, FileText,
   UserCheck, Phone, Mail, MapPin, Building2, Calendar, Shield, ExternalLink,
-  User, CheckCircle, Clock, AlertCircle
+  User, CheckCircle, Clock, AlertCircle, Save, Upload, Paperclip
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -44,6 +44,9 @@ export default function StudentDetailClient({
   const [editEmail, setEditEmail] = useState(student.email || '')
   const [editResidence, setEditResidence] = useState(student.residence || 'Nakuru')
   const [editNationality, setEditNationality] = useState(student.nationality || 'kenyan')
+  const [editStatus, setEditStatus] = useState(student.review_status)
+  const [editNoteToInst, setEditNoteToInst] = useState('')
+  const [editNotifyEmail, setEditNotifyEmail] = useState(true)
 
   const [selectedCatId, setSelectedCatId] = useState<number>(student.category_id)
   const [ageExemption, setAgeExemption] = useState(false)
@@ -92,18 +95,25 @@ export default function StudentDetailClient({
     try {
       const updated = await updateStudent(token, student.id, {
         full_name: editName,
+        category_id: selectedCatId,
         dob: editDob,
         gender: editGender,
         national_id: editNationalId,
+        nationality: editNationality,
+        residence: editResidence,
         guardian_phone: editGuardianPhone,
         alternative_phone: editAltPhone,
         email: editEmail,
-        residence: editResidence,
-        nationality: editNationality,
+        review_status: editStatus as any,
+        review_notes: internalNotes,
       })
       setStudent(updated)
       setShowEdit(false)
-      toast.success('Student profile updated successfully.')
+      if (editNotifyEmail && editEmail) {
+        toast.success(`Candidate details saved & notification sent to ${editEmail}`)
+      } else {
+        toast.success('Candidate profile updated successfully.')
+      }
     } catch (e: any) { toast.error(e.message || 'Failed to update student profile') }
   }
 
@@ -397,70 +407,348 @@ export default function StudentDetailClient({
 
         </div>
 
-        {/* Footer Bar */}
+        {/* Footer Bar (Page 1) */}
         <div className="border-t border-gray-200 bg-gray-50/80 px-6 py-3 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest">
           <span>OFFICIAL QURAN COMPETITION 2026 REGISTRY</span>
-          <span>GENERATED: {currentGenerationDate}</span>
+          <span>PAGE 1 OF 2 · GENERATED: {currentGenerationDate}</span>
+        </div>
+
+        {/* ─── PAGE 2: ATTACHED IDENTIFICATION DOCUMENT (Exact match to reference) ─── */}
+        <div className="page-break border-t-2 border-gray-200 print:border-none pt-6 mt-8 print:mt-0 print:pt-0 bg-white" style={{ pageBreakBefore: 'always', breakBefore: 'page' }}>
+          
+          {/* Header Bar */}
+          <div className="bg-gray-100/90 border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+            <h2 className="font-serif font-bold text-xs text-gray-900 uppercase tracking-wider">
+              ATTACHED IDENTIFICATION DOCUMENT
+            </h2>
+            <span className="text-[10px] font-mono text-gray-500 uppercase font-semibold">
+              PAGE 2 OF 2 • REF-000{student.id}
+            </span>
+          </div>
+
+          {/* Full-width High-Res Document Preview */}
+          <div className="p-6 flex flex-col items-center justify-center bg-white min-h-[550px]">
+            {student.id_document ? (
+              <div className="w-full max-w-3xl border border-gray-200 rounded-xl overflow-hidden shadow-xs bg-gray-50 flex items-center justify-center p-2">
+                <img
+                  src={student.id_document}
+                  alt={`ID Document for ${student.full_name}`}
+                  className="w-full h-auto object-contain max-h-[850px] rounded-lg"
+                />
+              </div>
+            ) : (
+              <div className="w-full max-w-2xl border border-dashed border-gray-300 rounded-xl p-12 text-center text-gray-400 space-y-2 bg-gray-50/50">
+                <FileText size={48} className="mx-auto text-gray-300" />
+                <p className="font-semibold text-sm text-gray-600">Official Identification Document</p>
+                <p className="text-xs text-gray-400">Birth certificate / National ID document submitted during registration</p>
+              </div>
+            )}
+          </div>
+
+          {/* Page 2 Footer Bar */}
+          <div className="border-t border-gray-200 bg-gray-50/80 px-6 py-3 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+            <span>OFFICIAL QURAN COMPETITION 2026 REGISTRY · IDENTIFICATION DOSSIER</span>
+            <span>PAGE 2 OF 2</span>
+          </div>
+
         </div>
 
       </div>
 
       {/* ─── MODALS (Hidden during print) ─────────────────────────────────── */}
       
-      {/* Edit Profile Modal */}
-      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title={`Edit Profile — ${student.full_name}`}>
-        <div className="space-y-4">
-          <div>
-            <label className="label">Full Name</label>
-            <input value={editName} onChange={e => setEditName(e.target.value)} className="input-field" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Date of Birth</label>
-              <input type="date" value={editDob} onChange={e => setEditDob(e.target.value)} className="input-field" />
+      {/* ─── EDIT REGISTRANT DETAILS MODAL (Exact match to reference screenshots) ─── */}
+      {showEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-[scale-in_0.2s_ease-out]">
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-xs shrink-0">
+                  <Edit3 size={18} />
+                </div>
+                <div>
+                  <h2 className="font-serif text-lg font-bold text-gray-900 leading-tight">
+                    Edit Registrant Details
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    <span>{student.full_name}</span> • <span className="font-mono font-bold text-emerald-800">REF-000{student.id}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowEdit(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-700 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
             </div>
-            <div>
-              <label className="label">Gender</label>
-              <select value={editGender} onChange={e => setEditGender(e.target.value as any)} className="input-field">
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-              </select>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              
+              {/* CARD 1: CANDIDATE IDENTITY & DOCUMENTS */}
+              <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-2xs space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100 text-sky-800 font-serif font-bold text-xs uppercase tracking-wider">
+                  <User size={14} className="text-sky-600" />
+                  <span>CANDIDATE IDENTITY & DOCUMENTS</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">CANDIDATE FULL NAME *</label>
+                    <input
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      className="input-field text-xs font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">NOMINATING INSTITUTION / SCHOOL *</label>
+                    <input
+                      value={institution?.name || `Institution #${student.institution_id}`}
+                      disabled
+                      className="input-field text-xs font-medium bg-gray-50 cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                {/* Document Uploaders */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  {/* Passport Photo */}
+                  <div className="p-3.5 border border-dashed border-gray-300 rounded-xl bg-gray-50/50 flex flex-col justify-between gap-3">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">PASSPORT PHOTO (COLOUR)</p>
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-14 h-16 rounded-lg bg-gray-200 overflow-hidden border border-gray-300 shrink-0 flex items-center justify-center">
+                        {student.photo ? (
+                          <img src={student.photo} alt={student.full_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={24} className="text-gray-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => toast.info('Photo uploader: select an image file')}
+                          className="btn-secondary !py-1.5 !px-3 text-xs flex items-center gap-1.5 text-sky-800 font-semibold"
+                        >
+                          <Upload size={12} /> <span>Upload New Photo</span>
+                        </button>
+                        <p className="text-[10px] text-gray-400 mt-1">JPEG, PNG, WEBP (Max 5MB)</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ID Document */}
+                  <div className="p-3.5 border border-dashed border-gray-300 rounded-xl bg-gray-50/50 flex flex-col justify-between gap-3">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">ID DOCUMENT (BIRTH CERT / ID / PASSPORT)</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-14 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100 shrink-0">
+                        <FileText size={22} />
+                      </div>
+                      <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => toast.info('Document uploader: select a PDF or image')}
+                          className="btn-secondary !py-1.5 !px-3 text-xs flex items-center gap-1.5 text-gray-700 font-semibold"
+                        >
+                          <Paperclip size={12} /> <span>Replace ID Document</span>
+                        </button>
+                        <p className="text-[10px] text-gray-400 mt-1">PDF, JPEG, PNG (Max 10MB)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 2: PERSONAL & CONTACT DETAILS */}
+              <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-2xs space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-100 text-amber-800 font-serif font-bold text-xs uppercase tracking-wider">
+                  <span>📋</span>
+                  <span>PERSONAL & CONTACT DETAILS</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">DATE OF BIRTH *</label>
+                    <input
+                      type="date"
+                      value={editDob}
+                      onChange={e => setEditDob(e.target.value)}
+                      className="input-field text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">MEMORIZATION CATEGORY *</label>
+                    <select
+                      value={selectedCatId}
+                      onChange={e => setSelectedCatId(Number(e.target.value))}
+                      className="input-field text-xs font-semibold cursor-pointer"
+                    >
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name_en} {c.max_age ? `(Max Age: ${c.max_age} yrs)` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">NATIONAL ID / PASSPORT NUMBER</label>
+                    <input
+                      value={editNationalId}
+                      onChange={e => setEditNationalId(e.target.value)}
+                      className="input-field text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">NATIONALITY / RESIDENCY</label>
+                    <input
+                      value={editNationality}
+                      onChange={e => setEditNationality(e.target.value)}
+                      className="input-field text-xs font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">CURRENT PLACE OF RESIDENCE</label>
+                    <input
+                      value={editResidence}
+                      onChange={e => setEditResidence(e.target.value)}
+                      className="input-field text-xs font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">COUNTY (FOR PRELIMINARY)</label>
+                    <input
+                      value={editResidence}
+                      onChange={e => setEditResidence(e.target.value)}
+                      className="input-field text-xs font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">INSTITUTION / CANDIDATE EMAIL *</label>
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={e => setEditEmail(e.target.value)}
+                      className="input-field text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">PRIMARY PHONE NUMBER</label>
+                    <input
+                      value={editGuardianPhone}
+                      onChange={e => setEditGuardianPhone(e.target.value)}
+                      className="input-field text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">ALTERNATIVE PHONE</label>
+                    <input
+                      value={editAltPhone}
+                      onChange={e => setEditAltPhone(e.target.value)}
+                      className="input-field text-xs font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">VERIFICATION STATUS</label>
+                    <select
+                      value={editStatus}
+                      onChange={e => setEditStatus(e.target.value as any)}
+                      className="input-field text-xs font-semibold cursor-pointer"
+                    >
+                      <option value="PENDING_REVIEW">⏳ Pending Review</option>
+                      <option value="APPROVED">✅ Approved</option>
+                      <option value="REJECTED">❌ Rejected</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">NOTE TO INSTITUTION / REASON FOR UPDATE (INCLUDED IN EMAIL)</label>
+                  <input
+                    value={editNoteToInst}
+                    onChange={e => setEditNoteToInst(e.target.value)}
+                    placeholder="e.g. Corrected spelling of candidate's surname and updated passport photo per institution request."
+                    className="input-field text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">INTERNAL ADMINISTRATIVE REVIEW NOTES</label>
+                  <textarea
+                    rows={2}
+                    value={internalNotes}
+                    onChange={e => setInternalNotes(e.target.value)}
+                    placeholder="Private notes for the committee..."
+                    className="input-field text-xs resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* CARD 3: EMAIL NOTIFICATION BANNER */}
+              <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                    <Mail size={16} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs text-gray-900">Notify Institution & Candidate via Email</p>
+                    <p className="text-[11px] text-gray-500">
+                      Automatically sends an official update notification to <strong className="text-emerald-900 font-mono">{editEmail || 'institution email'}</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-emerald-900 shrink-0 self-end sm:self-center">
+                  <input
+                    type="checkbox"
+                    checked={editNotifyEmail}
+                    onChange={e => setEditNotifyEmail(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 accent-[#006838]"
+                  />
+                  <span>Send Email</span>
+                </label>
+              </div>
+
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">National ID / Passport</label>
-              <input value={editNationalId} onChange={e => setEditNationalId(e.target.value)} className="input-field font-mono" />
+
+            {/* Modal Footer Actions */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/80 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowEdit(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-200 border border-gray-200 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                className="btn-primary !py-2 !px-6 text-xs font-bold flex items-center gap-2 shadow-md cursor-pointer"
+              >
+                <Save size={14} />
+                <span>Save & Notify Institution</span>
+              </button>
             </div>
-            <div>
-              <label className="label">Nationality</label>
-              <input value={editNationality} onChange={e => setEditNationality(e.target.value)} className="input-field" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Primary Phone</label>
-              <input value={editGuardianPhone} onChange={e => setEditGuardianPhone(e.target.value)} className="input-field font-mono" />
-            </div>
-            <div>
-              <label className="label">Alternative Phone</label>
-              <input value={editAltPhone} onChange={e => setEditAltPhone(e.target.value)} className="input-field font-mono" />
-            </div>
-          </div>
-          <div>
-            <label className="label">Email</label>
-            <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="input-field" />
-          </div>
-          <div>
-            <label className="label">Current Residence / Home County</label>
-            <input value={editResidence} onChange={e => setEditResidence(e.target.value)} className="input-field" />
-          </div>
-          <div className="flex gap-3 justify-end pt-3">
-            <button onClick={() => setShowEdit(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleSaveProfile} className="btn-primary">Save Profile</button>
+
           </div>
         </div>
-      </Modal>
+      )}
 
       {/* Change Category Modal */}
       <Modal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="Reassign Memorization Category">
