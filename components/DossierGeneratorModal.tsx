@@ -84,26 +84,18 @@ export default function DossierGeneratorModal({
     ])
   }, [formatTime])
 
-  // Build candidate PDF dossier content blob
-  const createCandidateDossierBlob = useCallback((student: StudentRead, fileSizeStr: string) => {
-    const categoryName = catMap[student.category_id] || (student.category_id === 1 ? "15 Juz'" : student.category_id === 2 ? "20 Juz'" : "30 Juz'")
-    const content = `%PDF-1.7\n` +
-      `% Official Musabaqa Candidate Dossier - Jamia Mosque Committee, Nairobi\n` +
-      `% Candidate Name: ${student.full_name}\n` +
-      `% Candidate ID: REF-000${student.id}\n` +
-      `% National ID: ${student.national_id || 'N/A'}\n` +
-      `% Quran Category: ${categoryName}\n` +
-      `% Residence / County: ${student.residence || 'Mombasa'}\n` +
-      `% Guardian Phone: ${student.guardian_phone}\n` +
-      `% Alternative Phone: ${student.alternative_phone || 'N/A'}\n` +
-      `% Email: ${student.email || 'N/A'}\n` +
-      `% Review Status: ${student.review_status}\n` +
-      `% Compiled Timestamp: ${new Date().toISOString()}\n` +
-      `% Target Format: PDF/A-3b Multi-Page Certified Dossier with High-Res Identification Documents\n` +
-      `% File Size: ${fileSizeStr}\n`
-
-    return new Blob([content], { type: 'application/pdf' })
-  }, [catMap])
+  // Fetch real certified candidate PDF dossier from backend
+  const fetchCandidatePdfBlob = useCallback(async (student: StudentRead): Promise<Blob> => {
+    const url = getStudentPdfUrl(student.id)
+    const activeToken = _token || (typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '')
+    const res = await fetch(url, {
+      headers: activeToken ? { Authorization: `Bearer ${activeToken}` } : {}
+    })
+    if (!res.ok) {
+      throw new Error(`PDF endpoint returned HTTP ${res.status}: ${res.statusText}`)
+    }
+    return await res.blob()
+  }, [_token])
 
   // Initialize pipeline and logs when modal opens
   useEffect(() => {
@@ -128,7 +120,7 @@ export default function DossierGeneratorModal({
       {
         id: 'init-2',
         timestamp: formatTime(),
-        message: `Target format: PDF/A-3b with high-res photo embedding & official national ID document integration.`,
+        message: `Connecting to Jamia Musabaqa PDF compiler (certified PDF dossier + ID document merge).`,
         type: 'info'
       }
     ]
@@ -167,7 +159,7 @@ export default function DossierGeneratorModal({
 
   // Concurrency limit mapped to worker speed
   const concurrencyLimit = workerSpeed === '5x' ? 5 : workerSpeed === '3x' ? 3 : workerSpeed === '2x' ? 2 : 1
-  const compilationDelay = workerSpeed === '5x' ? 700 : workerSpeed === '3x' ? 1100 : workerSpeed === '2x' ? 1700 : 2500
+  const compilationDelay = workerSpeed === '5x' ? 300 : workerSpeed === '3x' ? 600 : workerSpeed === '2x' ? 1000 : 1600
 
   // Multi-worker Concurrent Processing Engine
   useEffect(() => {
@@ -198,7 +190,7 @@ export default function DossierGeneratorModal({
             next[idx] = {
               ...item,
               status: 'COMPILING',
-              progress: 30,
+              progress: 40,
               startedAt: Date.now()
             }
             appendLog(`Compiling dossier for: ${item.student.full_name} (#${item.student.id})...`, 'compiling')
@@ -207,42 +199,60 @@ export default function DossierGeneratorModal({
         return next
       })
 
-      // Schedule completion of each started item
+      // Fetch real compiled PDF for each candidate
       pendingIndices.forEach(idx => {
         const candidate = pipeline[idx]?.student
         if (!candidate) return
 
-        const delay = compilationDelay + Math.floor(Math.random() * 450)
-
         setTimeout(() => {
-          setPipeline(prev => {
-            const item = prev[idx]
-            if (!item || item.status !== 'COMPILING') return prev
+          fetchCandidatePdfBlob(candidate)
+            .then((blob) => {
+              setPipeline(prev => {
+                const item = prev[idx]
+                if (!item || item.status !== 'COMPILING') return prev
 
-            const randomMb = Number((0.34 + Math.random() * 1.72).toFixed(2))
-            const fileSizeStr = `${randomMb.toFixed(2)} MB`
-            const fileSizeBytes = Math.round(randomMb * 1024 * 1024)
-            const blob = createCandidateDossierBlob(candidate, fileSizeStr)
+                const sizeInBytes = blob.size
+                const sizeInMb = sizeInBytes / (1024 * 1024)
+                const fileSizeStr = sizeInMb >= 0.1 ? `${sizeInMb.toFixed(2)} MB` : `${Math.round(sizeInBytes / 1024)} KB`
 
-            const next = [...prev]
-            next[idx] = {
-              ...item,
-              status: 'READY',
-              progress: 100,
-              fileSizeBytes,
-              fileSizeStr,
-              blob
-            }
+                const next = [...prev]
+                next[idx] = {
+                  ...item,
+                  status: 'READY',
+                  progress: 100,
+                  fileSizeBytes: sizeInBytes,
+                  fileSizeStr,
+                  blob
+                }
 
-            appendLog(`✓ Finished dossier for ${candidate.full_name.toUpperCase()} (${fileSizeStr})`, 'success')
-            return next
-          })
-        }, delay)
+                appendLog(`✓ Finished certified dossier for ${candidate.full_name.toUpperCase()} (${fileSizeStr})`, 'success')
+                return next
+              })
+            })
+            .catch((err) => {
+              console.error(`Failed to compile dossier for ${candidate.full_name}:`, err)
+              setPipeline(prev => {
+                const item = prev[idx]
+                if (!item || item.status !== 'COMPILING') return prev
+
+                const next = [...prev]
+                next[idx] = {
+                  ...item,
+                  status: 'FAILED',
+                  progress: 0,
+                  error: err.message || 'Compilation error'
+                }
+
+                appendLog(`✗ Error compiling dossier for ${candidate.full_name.toUpperCase()}: ${err.message}`, 'error')
+                return next
+              })
+            })
+        }, compilationDelay)
       })
     }, 40)
 
     return () => clearTimeout(timeout)
-  }, [isOpen, isPaused, pipeline, concurrencyLimit, compilationDelay, appendLog, createCandidateDossierBlob])
+  }, [isOpen, isPaused, pipeline, concurrencyLimit, compilationDelay, appendLog, fetchCandidatePdfBlob])
 
   if (!isOpen) return null
 
@@ -287,13 +297,23 @@ export default function DossierGeneratorModal({
   }
 
   // Trigger individual PDF download using the candidate blob
-  const handleDownloadSinglePdf = (item: PipelineItem) => {
+  const handleDownloadSinglePdf = async (item: PipelineItem) => {
     const student = item.student
-    const blob = item.blob || createCandidateDossierBlob(student, item.fileSizeStr || '0.46 MB')
+    let blob = item.blob
+    if (!blob) {
+      try {
+        toast.info(`Fetching certified dossier PDF for ${student.full_name}...`)
+        blob = await fetchCandidatePdfBlob(student)
+      } catch (err: any) {
+        toast.error(`Failed to download dossier for ${student.full_name}: ${err.message}`)
+        return
+      }
+    }
+    const cleanName = student.full_name.trim().replace(/\s+/g, '_')
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `Candidate_Dossier_${student.id}_${student.full_name.replace(/\s+/g, '_')}.pdf`
+    a.download = `REF_${String(student.id).padStart(5, '0')}_${cleanName}_Dossier.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -325,14 +345,14 @@ export default function DossierGeneratorModal({
 
   // Download real ZIP Archive of all dossiers using JSZip
   const handleDownloadZipArchive = async () => {
-    const readyItems = pipeline.filter(p => p.status === 'READY')
+    const readyItems = pipeline.filter(p => p.status === 'READY' && p.blob)
     if (readyItems.length === 0) {
       toast.error('No compiled dossiers ready for archive download.')
       return
     }
 
     setIsPackagingZip(true)
-    toast.info(`Packaging ${readyItems.length} candidate dossier PDFs into ZIP archive...`)
+    toast.info(`Packaging ${readyItems.length} certified candidate dossier PDFs into ZIP archive...`)
 
     try {
       const zip = new JSZip()
@@ -340,48 +360,57 @@ export default function DossierGeneratorModal({
 
       readyItems.forEach(item => {
         const student = item.student
-        const filename = `REF_${String(student.id).padStart(5, '0')}_${student.full_name.replace(/\s+/g, '_')}_Dossier.pdf`
-        const blob = item.blob || createCandidateDossierBlob(student, item.fileSizeStr || '0.46 MB')
-        folder.file(filename, blob)
+        const cleanName = student.full_name.trim().replace(/\s+/g, '_')
+        const filename = `REF_${String(student.id).padStart(5, '0')}_${cleanName}_Dossier.pdf`
+        if (item.blob) {
+          folder.file(filename, item.blob)
+        }
       })
 
       // Add archive manifest
       const manifest = {
         archive_title: 'Official_Musabaqa_Candidate_Dossiers_2026',
+        institution: 'Jamia Mosque Committee · Nairobi, Kenya',
+        competition: 'Quran Memorization Competition 2026',
         generated_at: new Date().toISOString(),
-        total_candidates: totalCount,
-        compiled_candidates: readyCount,
-        total_size_mb: totalMbGenerated,
-        organization: 'Jamia Mosque Committee · Nairobi, Kenya',
+        total_candidates: readyItems.length,
         candidates: readyItems.map(item => ({
-          id: item.student.id,
+          ref_id: `REF-${String(item.student.id).padStart(5, '0')}`,
           name: item.student.full_name,
-          category: catMap[item.student.category_id] || 'Category',
-          national_id: item.student.national_id || 'N/A',
-          residence: item.student.residence || 'Mombasa',
+          category_id: item.student.category_id,
+          national_id: item.student.national_id,
           file_size: item.fileSizeStr,
+          status: item.student.review_status
         }))
       }
       folder.file('MANIFEST.json', JSON.stringify(manifest, null, 2))
 
-      const zipBlob = await zip.generateAsync({ type: 'blob' })
-      const url = URL.createObjectURL(zipBlob)
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      })
+
+      const zipUrl = URL.createObjectURL(zipBlob)
       const a = document.createElement('a')
-      a.href = url
-      a.download = `Musabaqa_Candidate_Dossiers_${readyCount}_of_${totalCount}.zip`
+      a.href = zipUrl
+      a.download = `Musabaqa_Candidate_Dossiers_${readyItems.length}_Candidates.zip`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      URL.revokeObjectURL(zipUrl)
 
-      toast.success(`ZIP Archive with ${readyCount} official candidate dossiers downloaded successfully!`)
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'ZIP generation failed'
-      toast.error(`Failed to package ZIP: ${errMsg}`)
+      toast.success(`ZIP Archive generated and downloaded successfully!`)
+      appendLog(`✓ Downloaded ZIP archive containing ${readyItems.length} candidate dossiers.`, 'success')
+    } catch (err: any) {
+      console.error('ZIP generation error:', err)
+      toast.error(`Failed to package ZIP archive: ${err.message}`)
+      appendLog(`✗ ZIP packaging error: ${err.message}`, 'error')
     } finally {
       setIsPackagingZip(false)
     }
   }
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-6 animate-in fade-in duration-200">
