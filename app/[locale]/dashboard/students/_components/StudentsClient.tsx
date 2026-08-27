@@ -22,7 +22,7 @@ import {
 import {
   approveStudent, rejectStudent, reassignStudentCategory, updateStudent,
   bulkSoftDeleteStudents, getReportUrl, getExportAnalyticsUrl, getCompetitionConfig,
-  type StudentRead, type InstitutionRead, type Category, type Region, type CompetitionConfig
+  type StudentRead, type InstitutionRead, type Category, type Region, type County, type CompetitionConfig
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 import Modal from '@/components/Modal'
@@ -36,13 +36,14 @@ type StudentsClientProps = {
   institutions: InstitutionRead[]
   categories: Category[]
   regions: Region[]
+  counties?: County[]
   dict: Dict
   locale: string
   token: string
 }
 
 export default function StudentsClient({
-  initialData, institutions, categories, regions, dict, locale, token
+  initialData, institutions, categories, regions, counties = [], dict, locale, token
 }: StudentsClientProps) {
   const t = dict.students
   const tc = dict.common
@@ -88,6 +89,78 @@ export default function StudentsClient({
   const [ageExemption, setAgeExemption] = useState(false)
 
   const [editingStudent, setEditingStudent] = useState<StudentRead | null>(null)
+
+  // Map institutions by ID for quick lookup
+  const instMap = useMemo(() => {
+    const m: Record<number, InstitutionRead> = {}
+    institutions.forEach(i => { m[i.id] = i })
+    return m
+  }, [institutions])
+
+  // Map categories by ID for quick lookup
+  const catMap = useMemo(() => {
+    const m: Record<number, Category> = {}
+    categories.forEach(c => { m[c.id] = c })
+    return m
+  }, [categories])
+
+  // Map regions by ID for quick lookup
+  const regMap = useMemo(() => {
+    const m: Record<number, Region> = {}
+    regions.forEach(r => { m[r.id] = r })
+    return m
+  }, [regions])
+
+  // Summary Metrics for Stat Cards
+  const totalStudents    = data.length
+  const pendingStudents  = data.filter(s => s.review_status === 'PENDING_REVIEW').length
+  const approvedStudents = data.filter(s => s.review_status === 'APPROVED').length
+  const rejectedStudents = data.filter(s => s.review_status === 'REJECTED').length
+
+  // Distinct locations: ONLY locations that are already available in the database
+  const distinctLocations = useMemo(() => {
+    const locSet = new Set<string>()
+
+    if (isNational) {
+      // 1. Counties from the database counties table
+      counties.forEach(c => {
+        if (c.name) {
+          const clean = c.name.replace(/\s+County$/i, '').trim()
+          if (clean) locSet.add(clean)
+        }
+      })
+
+      // 2. Counties from candidate records stored in the database
+      data.forEach(s => {
+        const c = (s as any).county || (s as any).home_county
+        if (c && typeof c === 'string') {
+          const clean = c.replace(/\s+County$/i, '').trim()
+          if (clean) locSet.add(clean)
+        }
+        if (s.residence && typeof s.residence === 'string') {
+          const clean = s.residence.replace(/\s+County$/i, '').trim()
+          if (clean) locSet.add(clean)
+        }
+      })
+    } else {
+      // 1. Regional zones from the database regions table
+      regions.forEach(r => {
+        if (r.name_en && r.name_en.trim()) {
+          locSet.add(r.name_en.trim())
+        }
+      })
+
+      // 2. Residences / zones from candidate records stored in the database
+      data.forEach(s => {
+        if (s.residence && typeof s.residence === 'string' && s.residence.trim()) {
+          locSet.add(s.residence.trim())
+        }
+      })
+    }
+
+    return Array.from(locSet).filter(Boolean).sort((a, b) => a.localeCompare(b))
+  }, [isNational, counties, regions, data])
+
   const [editName, setEditName] = useState('')
   const [editInstId, setEditInstId] = useState<number>(0)
   const [editCatId, setEditCatId] = useState<number>(0)
@@ -167,58 +240,6 @@ export default function StudentsClient({
     toast.info('Cleared all sort rules')
   }
 
-  const instMap = useMemo(() => Object.fromEntries(institutions.map(i => [i.id, i])), [institutions])
-  const catMap  = useMemo(() => Object.fromEntries(categories.map(c => [c.id, c])), [categories])
-  const regMap  = useMemo(() => Object.fromEntries(regions.map(r => [r.id, r])), [regions])
-
-  const totalStudents    = data.length
-  const pendingStudents  = data.filter(s => s.review_status === 'PENDING_REVIEW').length
-  const approvedStudents = data.filter(s => s.review_status === 'APPROVED').length
-  const rejectedStudents = data.filter(s => s.review_status === 'REJECTED').length
-
-  // Distinct locations: Harmonized directly from competition settings data
-  const distinctLocations = useMemo(() => {
-    const locSet = new Set<string>()
-
-    if (isNational) {
-      // 1. Read counties configured in competition settings
-      const rows = compConfig.national_rows && compConfig.national_rows.length > 0
-        ? compConfig.national_rows
-        : ['Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County', 'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County', 'Kilifi County', 'Lamu County']
-
-      rows.forEach(r => {
-        const clean = r.replace(/\s+County$/i, '').trim()
-        if (clean) locSet.add(clean)
-      })
-
-      // 2. Also include any other county row present in granular_limits
-      Object.keys(compConfig.granular_limits || {}).forEach(k => {
-        if (k.toLowerCase().includes('county')) {
-          const clean = k.replace(/\s+County$/i, '').trim()
-          if (clean) locSet.add(clean)
-        }
-      })
-    } else {
-      // 1. Read regional zones configured in competition settings
-      const rows = compConfig.county_rows && compConfig.county_rows.length > 0
-        ? compConfig.county_rows
-        : ['Eastleigh', 'Kiamaiko', 'Komarock', 'Kasarani', 'Westlands', 'Kibra', 'South C', 'Pangani', 'Dandora', 'Kayole']
-
-      rows.forEach(r => {
-        if (r && r.trim()) locSet.add(r.trim())
-      })
-
-      // 2. Also include custom regions & database regions configured in settings
-      ;(compConfig.custom_regions || []).forEach(cr => {
-        if (cr.name_en) locSet.add(cr.name_en.trim())
-      })
-      regions.forEach(r => {
-        if (r.name_en) locSet.add(r.name_en.trim())
-      })
-    }
-
-    return Array.from(locSet).filter(Boolean).sort((a, b) => a.localeCompare(b))
-  }, [isNational, compConfig, regions])
 
   // Filtered dataset according to Status, Category, Location (County or Zone), Institution, and Search Query
   const filteredData = useMemo(() => {

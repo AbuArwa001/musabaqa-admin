@@ -1032,51 +1032,153 @@ export default function SettingsClient({
         </div>
       )}
 
-      {/* ─── TAB 4: Regions ───────────────────────────────────────────────── */}
+      {/* ─── TAB 4: Regions & Zones / Counties & Locations ───────────────── */}
       {activeTab === 'regions' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-gray-100 bg-gray-50/80 flex items-center justify-between">
+              <div>
+                <h2 className="font-serif font-bold text-sm text-gray-900 flex items-center gap-2">
+                  {isNational ? <Flag size={15} className="text-emerald-700" /> : <MapPin size={15} className="text-[#c99335]" />}
+                  <span>{isNational ? `Configured Competition Counties (${counties.length})` : `Configured Regional Zones (${regions.length})`}</span>
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {isNational
+                    ? 'Counties synced with the National Competition Quota Matrix & Candidate Filters'
+                    : 'Regional zones synced with the County Competition Quota Matrix & Candidate Filters'}
+                </p>
+              </div>
+            </div>
+
             <table className="w-full text-left">
-              <thead className="bg-gray-50/80 border-b border-gray-200">
+              <thead className="bg-gray-50/60 border-b border-gray-200">
                 <tr>
                   <th className="table-th">ID</th>
-                  <th className="table-th">{t.region_name_en}</th>
-                  <th className="table-th">{t.region_name_ar}</th>
-                  <th className="table-th">County ID</th>
+                  <th className="table-th">{isNational ? 'County / Location' : t.region_name_en}</th>
+                  {!isNational && <th className="table-th">{t.region_name_ar}</th>}
+                  {!isNational && <th className="table-th">County ID</th>}
+                  <th className="table-th text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {regions.map(r => (
-                  <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="table-td text-gray-500 font-mono text-xs">#{r.id}</td>
-                    <td className="table-td font-semibold text-gray-900">{r.name_en}</td>
-                    <td className="table-td font-semibold text-gray-900">{r.name_ar}</td>
-                    <td className="table-td text-gray-600">{r.county_id}</td>
-                  </tr>
-                ))}
+                {isNational ? (
+                  counties.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-gray-400">
+                        No counties configured yet. Use the form to add counties.
+                      </td>
+                    </tr>
+                  ) : (
+                    counties.map(c => (
+                      <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
+                        <td className="table-td text-gray-500 font-mono text-xs">#{c.id}</td>
+                        <td className="table-td font-semibold text-gray-900 flex items-center gap-2">
+                          <span className="text-sm">🇰🇪</span> {c.name}
+                        </td>
+                        <td className="table-td text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditCounty(c)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-800 hover:bg-emerald-50 transition-colors"
+                              title={`Edit ${c.name}`}
+                            >
+                              <Edit size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCounty(c.id, c.name)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title={`Delete ${c.name}`}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )
+                ) : (
+                  regions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-gray-400">
+                        No regions configured yet. Use the form to add regions.
+                      </td>
+                    </tr>
+                  ) : (
+                    regions.map(r => (
+                      <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
+                        <td className="table-td text-gray-500 font-mono text-xs">#{r.id}</td>
+                        <td className="table-td font-semibold text-gray-900">{r.name_en}</td>
+                        <td className="table-td font-semibold text-gray-900" dir="rtl">{r.name_ar}</td>
+                        <td className="table-td text-gray-600 font-mono text-xs">{r.county_id}</td>
+                        <td className="table-td text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditRegion(r)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-800 hover:bg-emerald-50 transition-colors"
+                              title={`Edit ${r.name_en}`}
+                            >
+                              <Edit size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRegion(r.id, r.name_en)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title={`Delete ${r.name_en}`}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )
+                )}
               </tbody>
             </table>
           </div>
 
           <div className="lg:col-span-1 bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit">
             <h2 className="font-serif text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <MapPin size={16} className="text-[#c99335]" /> {t.regions_add}
+              {isNational ? <Flag size={16} className="text-emerald-700" /> : <MapPin size={16} className="text-[#c99335]" />}
+              <span>{isNational ? 'Add County / Location' : t.regions_add}</span>
             </h2>
-            <form onSubmit={handleRegion(onRegionSubmit)} className="space-y-3.5">
-              <div>
-                <label className="label">{t.region_name_en}</label>
-                <input {...regRegion('name_en')} className="input-field" placeholder="e.g. Eastleigh Regional Zone" dir="ltr" />
-              </div>
-              <div>
-                <label className="label">{t.region_name_ar}</label>
-                <input {...regRegion('name_ar')} className="input-field" placeholder="منطقة إيستلي" dir="rtl" />
-              </div>
-              <div>
-                <label className="label">{t.region_county}</label>
-                <input type="number" {...regRegion('county_id')} className="input-field" placeholder="County code" dir="ltr" />
-              </div>
-              <button type="submit" disabled={isSubRegion} className="btn-primary w-full mt-3 text-xs">{tc.save}</button>
-            </form>
+
+            {isNational ? (
+              <form onSubmit={handleCounty(onCountySubmit)} className="space-y-3.5">
+                <div>
+                  <label className="label">County Name</label>
+                  <input
+                    {...regCounty('name')}
+                    className="input-field"
+                    placeholder="e.g. Nairobi County, Mombasa..."
+                    dir="ltr"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Will be synced to the Quota Matrix and Candidate Filters.
+                  </p>
+                </div>
+                <button type="submit" disabled={isSubCounty} className="btn-primary w-full mt-3 text-xs flex items-center justify-center gap-1.5">
+                  <Plus size={14} /> Add County
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleRegion(onRegionSubmit)} className="space-y-3.5">
+                <div>
+                  <label className="label">{t.region_name_en}</label>
+                  <input {...regRegion('name_en')} className="input-field" placeholder="e.g. Eastleigh Regional Zone" dir="ltr" />
+                </div>
+                <div>
+                  <label className="label">{t.region_name_ar}</label>
+                  <input {...regRegion('name_ar')} className="input-field" placeholder="منطقة إيستلي" dir="rtl" />
+                </div>
+                <div>
+                  <label className="label">{t.region_county}</label>
+                  <input type="number" {...regRegion('county_id')} className="input-field" placeholder="County code (e.g. 1)" dir="ltr" />
+                </div>
+                <button type="submit" disabled={isSubRegion} className="btn-primary w-full mt-3 text-xs flex items-center justify-center gap-1.5">
+                  <Plus size={14} /> {tc.save}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -1113,6 +1215,42 @@ export default function SettingsClient({
           <div className="flex gap-3 justify-end pt-3">
             <button onClick={() => setEditingCategory(null)} className="btn-secondary">Cancel</button>
             <button onClick={handleSaveEditCategory} className="btn-primary">Save Changes</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Region Modal */}
+      <Modal isOpen={!!editingRegion} onClose={() => setEditingRegion(null)} title={`Edit Region — ${editingRegion?.name_en}`}>
+        <div className="space-y-4">
+          <div>
+            <label className="label">Name (English)</label>
+            <input value={editRegionNameEn} onChange={e => setEditRegionNameEn(e.target.value)} className="input-field" />
+          </div>
+          <div>
+            <label className="label">Name (Arabic)</label>
+            <input value={editRegionNameAr} onChange={e => setEditRegionNameAr(e.target.value)} className="input-field" dir="rtl" />
+          </div>
+          <div>
+            <label className="label">County ID</label>
+            <input type="number" value={editRegionCountyId} onChange={e => setEditRegionCountyId(e.target.value)} className="input-field" />
+          </div>
+          <div className="flex gap-3 justify-end pt-3">
+            <button onClick={() => setEditingRegion(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleSaveEditRegion} className="btn-primary">Save Changes</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit County Modal */}
+      <Modal isOpen={!!editingCounty} onClose={() => setEditingCounty(null)} title={`Edit County — ${editingCounty?.name}`}>
+        <div className="space-y-4">
+          <div>
+            <label className="label">County / Location Name</label>
+            <input value={editCountyName} onChange={e => setEditCountyName(e.target.value)} className="input-field" />
+          </div>
+          <div className="flex gap-3 justify-end pt-3">
+            <button onClick={() => setEditingCounty(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleSaveEditCounty} className="btn-primary">Save Changes</button>
           </div>
         </div>
       </Modal>
