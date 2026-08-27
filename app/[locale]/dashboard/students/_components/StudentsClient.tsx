@@ -14,7 +14,7 @@ import {
 import { toast } from 'sonner'
 import {
   Check, X, Search, Users, Clock, CheckCircle, XCircle, Loader2,
-  FileText, Edit3, Tag, Trash2, Eye, Zap, MapPin, Download, ArrowUpDown
+  FileText, Edit3, Tag, Trash2, Eye, Zap, MapPin, Download, ArrowUpDown, Plus
 } from 'lucide-react'
 
 import {
@@ -73,9 +73,62 @@ export default function StudentsClient({
 
   const [approvingId, setApprovingId] = useState<number | null>(null)
 
-  // Multi-Sort tiers
-  const [sortTier1, setSortTier1] = useState<{ id: string; desc: boolean }>({ id: 'created_at', desc: true })
-  const [sortTier2, setSortTier2] = useState<{ id: string; desc: boolean }>({ id: '', desc: false })
+  // Multi-Sort Rules state (Ultra-Premium Multi-Column / Multi-Row Sorting)
+  const [sortRules, setSortRules] = useState<Array<{ id: string; desc: boolean }>>([
+    { id: 'full_name', desc: false },
+    { id: 'institution_id', desc: true },
+  ])
+
+  const applySortPreset = (presetRules: Array<{ id: string; desc: boolean }>) => {
+    setSortRules(presetRules)
+    toast.success('Loaded sort preset')
+  }
+
+  const handleAddSortRule = () => {
+    const available = ['full_name', 'institution_id', 'category_id', 'dob', 'created_at', 'review_status']
+    const nextId = available.find(a => !sortRules.some(r => r.id === a)) || 'full_name'
+    setSortRules(prev => [...prev, { id: nextId, desc: false }])
+  }
+
+  const handleRemoveSortRule = (index: number) => {
+    setSortRules(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleMoveSortRule = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1
+    if (targetIdx < 0 || targetIdx >= sortRules.length) return
+    setSortRules(prev => {
+      const next = [...prev]
+      const temp = next[index]
+      next[index] = next[targetIdx]
+      next[targetIdx] = temp
+      return next
+    })
+  }
+
+  const handleToggleSortDirection = (index: number) => {
+    setSortRules(prev => prev.map((r, i) => i === index ? { ...r, desc: !r.desc } : r))
+  }
+
+  const handleUpdateSortField = (index: number, newId: string) => {
+    setSortRules(prev => prev.map((r, i) => i === index ? { ...r, id: newId } : r))
+  }
+
+  const handleApplyMultiSort = () => {
+    const newSorting: SortingState = sortRules
+      .filter(r => r.id)
+      .map(r => ({ id: r.id, desc: r.desc }))
+    setSorting(newSorting)
+    setShowMultiSortModal(false)
+    toast.success(`Applied multi-level sorting (${newSorting.length} active rules)`)
+  }
+
+  const handleClearAllSorts = () => {
+    setSortRules([])
+    setSorting([])
+    setShowMultiSortModal(false)
+    toast.info('Cleared all sort rules')
+  }
 
   const instMap = useMemo(() => Object.fromEntries(institutions.map(i => [i.id, i])), [institutions])
   const catMap  = useMemo(() => Object.fromEntries(categories.map(c => [c.id, c])), [categories])
@@ -196,15 +249,6 @@ export default function StudentsClient({
       toast.success('Category reassigned')
       setReassigningStudent(null)
     } catch (e: any) { toast.error(e.message || 'Failed to reassign category') }
-  }
-
-  const handleApplyMultiSort = () => {
-    const newSorting: SortingState = []
-    if (sortTier1.id) newSorting.push({ id: sortTier1.id, desc: sortTier1.desc })
-    if (sortTier2.id) newSorting.push({ id: sortTier2.id, desc: sortTier2.desc })
-    setSorting(newSorting)
-    setShowMultiSortModal(false)
-    toast.success('Applied multi-level sorting')
   }
 
   const columnHelper = createColumnHelper<StudentRead>()
@@ -536,65 +580,228 @@ export default function StudentsClient({
         token={token}
       />
 
-      {/* Multi-Level Sort Modal */}
-      <Modal isOpen={showMultiSortModal} onClose={() => setShowMultiSortModal(false)} title="Multi-Level Sort">
-        <div className="space-y-4">
-          <div>
-            <label className="label">Primary Sort Tier</label>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={sortTier1.id}
-                onChange={e => setSortTier1(prev => ({ ...prev, id: e.target.value }))}
-                className="input-field"
-              >
-                <option value="created_at">Submission Date</option>
-                <option value="full_name">Candidate Name</option>
-                <option value="dob">Date of Birth / Age</option>
-                <option value="category_id">Category</option>
-                <option value="review_status">Status</option>
-              </select>
-              <select
-                value={sortTier1.desc ? 'desc' : 'asc'}
-                onChange={e => setSortTier1(prev => ({ ...prev, desc: e.target.value === 'desc' }))}
-                className="input-field"
-              >
-                <option value="asc">Ascending (A-Z / Oldest)</option>
-                <option value="desc">Descending (Z-A / Newest)</option>
-              </select>
-            </div>
-          </div>
+      {/* Multi-Row / Multi-Column Sorting Modal (Ultra-Premium Jamia Theme) */}
+      {showMultiSortModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden animate-[scale-in_0.2s_ease-out]">
+            
+            {/* Emerald Header Banner */}
+            <div className="bg-gradient-to-r from-[#004d29] via-[#006838] to-[#004d29] p-6 text-white relative">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/70 border border-[#c99335]/40 text-[#c99335] text-[10px] font-bold tracking-wider uppercase">
+                    <Zap size={11} className="fill-[#c99335]" />
+                    <span>Multi-Row / Multi-Column Sorting</span>
+                  </div>
+                  <h2 className="font-serif text-xl font-bold text-white mt-2">
+                    Configure Sequential Sort Rules
+                  </h2>
+                  <p className="text-xs text-emerald-100/80 mt-1 max-w-lg leading-relaxed">
+                    Sort candidates across multiple tiers. When two candidates share the same primary value, secondary and tertiary rules resolve order.
+                  </p>
+                </div>
 
-          <div>
-            <label className="label">Secondary Sort Tier (Optional)</label>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={sortTier2.id}
-                onChange={e => setSortTier2(prev => ({ ...prev, id: e.target.value }))}
-                className="input-field"
-              >
-                <option value="">None</option>
-                <option value="full_name">Candidate Name</option>
-                <option value="category_id">Category</option>
-                <option value="dob">Age</option>
-                <option value="review_status">Status</option>
-              </select>
-              <select
-                value={sortTier2.desc ? 'desc' : 'asc'}
-                onChange={e => setSortTier2(prev => ({ ...prev, desc: e.target.value === 'desc' }))}
-                className="input-field"
-              >
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-              </select>
+                <button
+                  onClick={() => setShowMultiSortModal(false)}
+                  className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="flex gap-3 justify-end pt-3">
-            <button onClick={() => setShowMultiSortModal(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleApplyMultiSort} className="btn-primary">Apply Sorting</button>
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+              
+              {/* Quick Presets */}
+              <div>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-2">
+                  Quick Presets:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => applySortPreset([
+                      { id: 'institution_id', desc: false },
+                      { id: 'category_id', desc: false },
+                      { id: 'full_name', desc: false }
+                    ])}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-[#006838] bg-white hover:bg-emerald-50/50 text-xs font-semibold text-gray-700 hover:text-emerald-900 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <span>🗺️</span> <span>County → Category → Name</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applySortPreset([
+                      { id: 'category_id', desc: false },
+                      { id: 'dob', desc: false },
+                      { id: 'full_name', desc: false }
+                    ])}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-[#006838] bg-white hover:bg-emerald-50/50 text-xs font-semibold text-gray-700 hover:text-emerald-900 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <span>📖</span> <span>Category → Age → Name</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applySortPreset([
+                      { id: 'review_status', desc: false },
+                      { id: 'created_at', desc: true }
+                    ])}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-[#006838] bg-white hover:bg-emerald-50/50 text-xs font-semibold text-gray-700 hover:text-emerald-900 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <span>🚦</span> <span>Status → Date (Newest)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => applySortPreset([
+                      { id: 'institution_id', desc: false },
+                      { id: 'full_name', desc: false }
+                    ])}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-[#006838] bg-white hover:bg-emerald-50/50 text-xs font-semibold text-gray-700 hover:text-emerald-900 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <span>🏛️</span> <span>Institution → County → Name</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sort Level Rows */}
+              <div className="space-y-3">
+                {sortRules.map((rule, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-gray-50/80 border border-gray-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs transition-all hover:border-gray-300"
+                  >
+                    {/* Tier Number & Label */}
+                    <div className="flex items-center gap-2.5 shrink-0 min-w-[100px]">
+                      <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs text-white ${idx === 0 ? 'bg-[#006838]' : 'bg-slate-700'}`}>
+                        {idx + 1}
+                      </span>
+                      <span className="font-bold text-xs text-gray-800">
+                        {idx === 0 ? 'Primary' : 'Then by'}
+                      </span>
+                    </div>
+
+                    {/* Column Select Dropdown */}
+                    <div className="flex-1 min-w-[160px]">
+                      <select
+                        value={rule.id}
+                        onChange={e => handleUpdateSortField(idx, e.target.value)}
+                        className="input-field !py-2 text-xs font-medium bg-white"
+                      >
+                        <option value="full_name">👤 Candidate Name</option>
+                        <option value="institution_id">🗺️ Location (County / Region)</option>
+                        <option value="category_id">📖 Memorization Category</option>
+                        <option value="dob">🎂 Age / Date of Birth</option>
+                        <option value="created_at">📅 Submission Date</option>
+                        <option value="review_status">🚦 Review Status</option>
+                      </select>
+                    </div>
+
+                    {/* Direction Toggle Pill */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSortDirection(idx)}
+                      className={`px-3 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 border ${
+                        !rule.desc
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                          : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                      }`}
+                    >
+                      {!rule.desc ? (
+                        <>
+                          <span className="text-emerald-700 font-extrabold text-sm">↑</span>
+                          <span>Ascending</span>
+                          <span className="text-emerald-600 font-normal text-[11px]">(A-Z / 1-9)</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-amber-700 font-extrabold text-sm">↓</span>
+                          <span>Descending</span>
+                          <span className="text-amber-600 font-normal text-[11px]">(Z-A / 9-1)</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Up / Down / Delete Actions */}
+                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => handleMoveSortRule(idx, 'up')}
+                        className={`p-1.5 rounded-lg border text-xs ${idx === 0 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-600 border-gray-200 hover:bg-gray-100 cursor-pointer'}`}
+                        title="Move Up"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === sortRules.length - 1}
+                        onClick={() => handleMoveSortRule(idx, 'down')}
+                        className={`p-1.5 rounded-lg border text-xs ${idx === sortRules.length - 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-600 border-gray-200 hover:bg-gray-100 cursor-pointer'}`}
+                        title="Move Down"
+                      >
+                        ▼
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSortRule(idx)}
+                        className="p-1.5 rounded-lg border border-rose-200 text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Remove Level"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add Another Sort Level Button */}
+                <button
+                  type="button"
+                  onClick={handleAddSortRule}
+                  className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-emerald-300 hover:border-[#006838] bg-emerald-50/40 hover:bg-emerald-50 text-[#006838] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                >
+                  <Plus size={14} />
+                  <span>Add Another Sort Level (Row {sortRules.length + 1})</span>
+                </button>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/80 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleClearAllSorts}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer"
+              >
+                Clear All Sorts
+              </button>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowMultiSortModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-200 border border-gray-200 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyMultiSort}
+                  className="btn-primary !py-2 !px-5 text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
+                >
+                  <Check size={14} />
+                  <span>Apply Multi-Sort ({sortRules.length} rules)</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
-      </Modal>
+      )}
 
       {/* Edit Candidate Quick Modal */}
       <Modal isOpen={!!editingStudent} onClose={() => setEditingStudent(null)} title={`Edit Profile — ${editingStudent?.full_name}`}>
