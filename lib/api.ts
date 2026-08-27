@@ -484,3 +484,110 @@ export function getAdminWsUrl(token: string): string {
   const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/^http/, 'ws')
   return `${base}/ws/admin/live-scoring?token=${token}`
 }
+
+// ─── Competitions & History ───────────────────────────────────────────────────
+
+export type CompetitionStatus = 'ACTIVE' | 'CONCLUDED' | 'DRAFT'
+export type HostOrganization = 'JAMIA_MOSQUE' | 'RELIGIOUS_ATTACHE' | 'JOINT_COLLABORATION' | 'CUSTOM'
+
+export interface GalleryItem {
+  id?: string
+  url: string
+  title: string
+  caption: string
+  stage: string
+  date?: string
+}
+
+export interface WinnerPodiumEntry {
+  rank: number
+  student_id?: number
+  student_name: string
+  institution_name?: string
+  location?: string
+  score: number
+  photo_url?: string
+  award_notes?: string
+}
+
+export interface CategoryWinnersPodium {
+  category_id: number
+  category_name_en: string
+  category_name_ar?: string
+  rank_1?: WinnerPodiumEntry | null
+  rank_2?: WinnerPodiumEntry | null
+  rank_3?: WinnerPodiumEntry | null
+  honorable_mentions?: WinnerPodiumEntry[]
+}
+
+export interface Competition {
+  id: number
+  title_en: string
+  title_ar: string
+  edition_label: string
+  year: number
+  host_org: HostOrganization
+  host_org_name_en: string
+  host_org_name_ar: string
+  status: CompetitionStatus
+  is_current: boolean
+  scope: 'NATIONAL' | 'COUNTY_REGIONAL'
+  start_date?: string | null
+  end_date?: string | null
+  registration_deadline?: string | null
+  grand_finale_date?: string | null
+  venue_en?: string | null
+  venue_ar?: string | null
+  banner_url?: string | null
+  theme_image_url?: string | null
+  logo_url?: string | null
+  description_en?: string | null
+  description_ar?: string | null
+  config_json?: any
+  gallery: GalleryItem[]
+  winners: any[]
+  created_at: string
+  updated_at: string
+}
+
+export async function listCompetitions(params?: Record<string, string>): Promise<Competition[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+  return request(`/api/v1/competitions${qs}`)
+}
+
+export async function getCompetition(id: number): Promise<Competition> {
+  return request(`/api/v1/competitions/${id}`)
+}
+
+export async function createCompetition(token: string, data: Partial<Competition>): Promise<Competition> {
+  return request('/api/v1/competitions', { method: 'POST', body: JSON.stringify(data) }, token)
+}
+
+export async function updateCompetition(token: string, id: number, data: Partial<Competition>): Promise<Competition> {
+  return request(`/api/v1/competitions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, token)
+}
+
+export async function deleteCompetition(token: string, id: number): Promise<void> {
+  return request(`/api/v1/competitions/${id}`, { method: 'DELETE' }, token)
+}
+
+export async function setCurrentCompetition(token: string, id: number): Promise<Competition> {
+  return request(`/api/v1/competitions/${id}/set-current`, { method: 'POST' }, token)
+}
+
+export async function addCompetitionGalleryItem(token: string, id: number, item: GalleryItem): Promise<Competition> {
+  return request(`/api/v1/competitions/${id}/gallery`, { method: 'POST', body: JSON.stringify(item) }, token)
+}
+
+export async function deleteCompetitionGalleryItem(token: string, id: number, itemId: string): Promise<Competition> {
+  return request(`/api/v1/competitions/${id}/gallery/${itemId}`, { method: 'DELETE' }, token)
+}
+
+export async function getCompetitionPodium(id: number): Promise<CategoryWinnersPodium[]> {
+  return request(`/api/v1/competitions/${id}/podium`)
+}
+
+export async function replicateCompetitionToJamiaEvents(token: string, id: number): Promise<any> {
+  return request(`/api/v1/competitions/${id}/replicate-to-jamia-events`, { method: 'POST' }, token)
+}
+
