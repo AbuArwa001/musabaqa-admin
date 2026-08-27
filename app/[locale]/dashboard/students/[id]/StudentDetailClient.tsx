@@ -254,22 +254,24 @@ export default function StudentDetailClient({
       <div className="printable-dossier bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         
         {/* Emerald Header Banner */}
-        <div className="bg-[#004d29] text-white p-6 relative overflow-hidden">
+        <div className="bg-[#0E7A4A] text-white p-6 relative overflow-hidden" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10h10v10H10z' fill='rgba(255,255,255,0.03)'/%3E%3C/svg%3E")`
+        }}>
           <div className="flex items-center justify-between gap-4 relative z-10">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-white/10 border border-[#c99335]/60 flex items-center justify-center p-1.5 shadow-inner shrink-0">
-                <Image src="/logo.png" alt="Jamia Mosque" width={34} height={34} className="object-contain" priority />
+              <div className="w-16 h-16 rounded-full bg-white border-2 border-[#F0D97A] flex items-center justify-center p-1.5 shadow-sm shrink-0">
+                <Image src="/logo.png" alt="Jamia Mosque" width={48} height={48} className="object-contain" priority />
               </div>
               <div>
-                <p className="text-[#f6cb7d] text-[10px] sm:text-xs uppercase font-bold tracking-widest font-serif">
+                <p className="text-[#F0D97A] text-[10px] uppercase font-extrabold tracking-widest">
                   JAMIA MOSQUE COMMITTEE · NAIROBI, KENYA
                 </p>
-                <h1 className="font-serif text-xl sm:text-2xl font-bold text-white mt-0.5 capitalize">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-white mt-0.5 capitalize tracking-tight">
                   {student.full_name}
                 </h1>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-emerald-100/90 mt-1 font-mono">
-                  <span className="font-bold text-[#f6cb7d]">ID: REF-000{student.id}</span>
-                  <span>•</span>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-200 mt-1">
+                  <span className="font-bold text-[#F0D97A]">ID:</span>
+                  <span className="font-semibold">REF-{String(student.id).padStart(5, '0')}</span>
                   <span>•</span>
                   <span>Submitted: {new Date(student.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                 </div>
@@ -278,18 +280,14 @@ export default function StudentDetailClient({
 
             {/* Status Pill Badge */}
             <div className="shrink-0">
-              <span className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-xs ${
+              <span className={`inline-block px-4 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-wide ${
                 student.review_status === 'APPROVED'
-                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  ? 'bg-[#ECFDF5] text-[#059669]'
                   : student.review_status === 'REJECTED'
-                  ? 'bg-rose-100 text-rose-900 border-rose-300'
-                  : 'bg-[#fdf4e4] text-[#b45309] border-[#fde68a]'
+                  ? 'bg-[#FEF2F2] text-[#DC2626]'
+                  : 'bg-[#FEF3C7] text-[#D97706]'
               }`}>
-                <span className={`w-2 h-2 rounded-full ${
-                  student.review_status === 'APPROVED' ? 'bg-emerald-600' :
-                  student.review_status === 'REJECTED' ? 'bg-rose-600' : 'bg-amber-600'
-                }`} />
-                <span>{student.review_status === 'PENDING_REVIEW' ? 'PENDING' : student.review_status}</span>
+                {student.review_status === 'APPROVED' ? '• APPROVED' : student.review_status === 'REJECTED' ? '• REJECTED' : '• PENDING'}
               </span>
             </div>
           </div>
@@ -459,9 +457,9 @@ export default function StudentDetailClient({
         </div>
 
         {/* Footer Bar (Page 1) */}
-        <div className="border-t border-gray-200 bg-gray-50/80 px-6 py-3 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+        <div className="border-t border-gray-200 bg-[#F8FAFC] px-6 py-3 flex items-center justify-between text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">
           <span>OFFICIAL QURAN COMPETITION 2026 REGISTRY</span>
-          <span>PAGE 1 OF 2 · GENERATED: {currentGenerationDate}</span>
+          <span>GENERATED: {currentGenerationDate}</span>
         </div>
 
         {/* ─── PAGE 2: ATTACHED IDENTIFICATION DOCUMENT (Exact match to reference) ─── */}
