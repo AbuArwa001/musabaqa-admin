@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { isValidLocale, getDictionary } from '@/lib/dictionaries'
-import { listRegions, listCategories, listAdminUsers } from '@/lib/api'
+import { listRegions, listCounties, listCategories, listAdminUsers } from '@/lib/api'
 import { decodeAdminToken } from '@/lib/auth'
 import SettingsClient from './SettingsClient'
 
@@ -22,11 +22,12 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
 
   const dict = await getDictionary(locale)
 
-  const [regions, categories, users] = await Promise.all([
+  const [regions, counties, categories, users] = await Promise.all([
     listRegions().catch(() => []),
+    listCounties().catch(() => []),
     listCategories().catch(() => []),
     listAdminUsers(token).catch(() => []),
   ])
 
-  return <SettingsClient regions={regions} categories={categories} users={users} dict={dict} locale={locale} token={token} />
+  return <SettingsClient regions={regions} counties={counties} categories={categories} users={users} dict={dict} locale={locale} token={token} />
 }
