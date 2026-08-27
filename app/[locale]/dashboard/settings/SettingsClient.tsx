@@ -6,11 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import {
-  createAdminUser, createRegion, createCategory, updateCategory, getCompetitionConfig, saveCompetitionConfig,
-  type Region, type Category, type AdminUserRead, type CompetitionConfig
+  createAdminUser, createRegion, updateRegion, deleteRegion,
+  listCounties, createCounty, updateCounty, deleteCounty,
+  createCategory, updateCategory, getCompetitionConfig, saveCompetitionConfig,
+  type Region, type County, type Category, type AdminUserRead, type CompetitionConfig
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
-import { UserPlus, MapPin, List, Settings, Trophy, Calendar, MapPin as LocationIcon, FileText, Sliders, Save, Globe, Flag, Edit, Plus, Check, Trash2 } from 'lucide-react'
+import { UserPlus, MapPin, List, Settings, Trophy, Calendar, MapPin as LocationIcon, FileText, Sliders, Save, Globe, Flag, Edit, Plus, Check, Trash2, ShieldCheck, AlertCircle } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Modal from '@/components/Modal'
 
@@ -29,6 +31,10 @@ const regionSchema = z.object({
   county_id: z.string().min(1),
 })
 
+const countySchema = z.object({
+  name: z.string().min(2),
+})
+
 const categorySchema = z.object({
   name_en: z.string().min(2),
   name_ar: z.string().min(2),
@@ -38,21 +44,31 @@ const categorySchema = z.object({
   display_order: z.string().min(1),
 })
 
+const DEFAULT_NATIONAL_COUNTIES = [
+  'Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County',
+  'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County',
+  'Kilifi County', 'Lamu County', 'Kajiado County'
+]
+
 export default function SettingsClient({ 
-  regions: initialRegions, categories: initialCategories, users: initialUsers, dict, locale, token 
+  regions: initialRegions, counties: initialCounties = [], categories: initialCategories, users: initialUsers, dict, locale, token 
 }: { 
-  regions: Region[], categories: Category[], users: AdminUserRead[], dict: Dict, locale: string, token: string 
+  regions: Region[], counties?: County[], categories: Category[], users: AdminUserRead[], dict: Dict, locale: string, token: string 
 }) {
   const t = dict.settings
   const tc = dict.common
+  const isAr = locale === 'ar'
 
   const [activeTab, setActiveTab] = useState<'config' | 'users' | 'regions' | 'categories'>('config')
   const [users, setUsers] = useState(initialUsers)
-  const [regions, setRegions] = useState(initialRegions)
+  const [regions, setRegions] = useState<Region[]>(initialRegions)
+  const [counties, setCounties] = useState<County[]>(initialCounties)
   const [categories, setCategories] = useState(initialCategories)
 
   // Competition Config state
   const [compConfig, setCompConfig] = useState<CompetitionConfig>(getCompetitionConfig())
+
+  const isNational = compConfig.scope === 'NATIONAL'
 
   // Category Edit state
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
@@ -63,11 +79,21 @@ export default function SettingsClient({
   const [catMaxAge, setCatMaxAge] = useState<string>('99')
   const [catOrder, setCatOrder] = useState<string>('1')
 
+  // Region / County Edit state
+  const [editingRegion, setEditingRegion] = useState<Region | null>(null)
+  const [editRegionNameEn, setEditRegionNameEn] = useState('')
+  const [editRegionNameAr, setEditRegionNameAr] = useState('')
+  const [editRegionCountyId, setEditRegionCountyId] = useState<string>('1')
+
+  const [editingCounty, setEditingCounty] = useState<County | null>(null)
+  const [editCountyName, setEditCountyName] = useState('')
+
   // Matrix Row Add state
   const [newRowName, setNewRowName] = useState('')
   
   const { register: regUser, handleSubmit: handleUser, reset: resetUser, watch: watchUser, formState: { isSubmitting: isSubUser } } = useForm<z.infer<typeof userSchema>>({ resolver: zodResolver(userSchema) })
   const { register: regRegion, handleSubmit: handleRegion, reset: resetRegion, formState: { isSubmitting: isSubRegion } } = useForm<z.infer<typeof regionSchema>>({ resolver: zodResolver(regionSchema) })
+  const { register: regCounty, handleSubmit: handleCounty, reset: resetCounty, formState: { isSubmitting: isSubCounty } } = useForm<z.infer<typeof countySchema>>({ resolver: zodResolver(countySchema) })
   const { register: regCat, handleSubmit: handleCat, reset: resetCat, formState: { isSubmitting: isSubCat } } = useForm<z.infer<typeof categorySchema>>({ resolver: zodResolver(categorySchema) })
 
   const userRole = watchUser('role')
@@ -75,6 +101,18 @@ export default function SettingsClient({
   useEffect(() => {
     setCompConfig(getCompetitionConfig())
   }, [])
+
+  // Auto-sync initial counties if database counties was empty but national_rows existed
+  useEffect(() => {
+    if (initialCounties.length === 0 && compConfig.national_rows && compConfig.national_rows.length > 0) {
+      setCounties(compConfig.national_rows.map((name, idx) => ({ id: idx + 1, name, active: true })))
+    }
+  }, [initialCounties, compConfig.national_rows])
+
+  // Active matrix locations derived directly from harmonized state
+  const activeMatrixList: string[] = isNational
+    ? (counties.length > 0 ? counties.map(c => c.name) : compConfig.national_rows || DEFAULT_NATIONAL_COUNTIES)
+    : (regions.length > 0 ? regions.map(r => r.name_en) : compConfig.county_rows || ['Eastleigh', 'Kasarani', 'South B', 'Langata', 'Embakasi', 'Westlands', 'Pumwani', 'Kajiado Town', 'Kitengela', 'Ngong'])
 
   const onUserSubmit = async (data: z.infer<typeof userSchema>) => {
     try {
@@ -93,10 +131,186 @@ export default function SettingsClient({
       const created = await createRegion(token, {
         name_en: data.name_en, name_ar: data.name_ar, county_id: Number(data.county_id)
       })
-      setRegions([...regions, created])
-      toast.success('Region created')
+      setRegions(prev => [...prev, created])
+      
+      // Also sync to quota limits matrix
+      setCompConfig(prev => {
+        const existing = prev.county_rows || []
+        const newRows = existing.includes(created.name_en) ? existing : [...existing, created.name_en]
+        const newLimits = { ...prev.granular_limits }
+        if (!newLimits[created.name_en]) {
+          newLimits[created.name_en] = { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' }
+        }
+        const updated = { ...prev, county_rows: newRows, granular_limits: newLimits }
+        saveCompetitionConfig(updated)
+        return updated
+      })
+
+      toast.success(`Region "${created.name_en}" added to database & quota matrix`)
       resetRegion()
     } catch (e: any) { toast.error(e.message || tc.error) }
+  }
+
+  const onCountySubmit = async (data: z.infer<typeof countySchema>) => {
+    try {
+      const created = await createCounty(token, { name: data.name, active: true })
+      setCounties(prev => [...prev, created])
+
+      // Also sync to quota limits matrix
+      setCompConfig(prev => {
+        const existing = prev.national_rows || []
+        const newRows = existing.includes(created.name) ? existing : [...existing, created.name]
+        const newLimits = { ...prev.granular_limits }
+        if (!newLimits[created.name]) {
+          newLimits[created.name] = { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' }
+        }
+        const updated = { ...prev, national_rows: newRows, granular_limits: newLimits }
+        saveCompetitionConfig(updated)
+        return updated
+      })
+
+      toast.success(`County "${created.name}" added to database & quota matrix`)
+      resetCounty()
+    } catch (e: any) {
+      // Fallback for offline/local county add
+      const fallbackId = Date.now()
+      const fallbackItem = { id: fallbackId, name: data.name, active: true }
+      setCounties(prev => [...prev, fallbackItem])
+      setCompConfig(prev => {
+        const existing = prev.national_rows || []
+        const newRows = existing.includes(data.name) ? existing : [...existing, data.name]
+        const newLimits = { ...prev.granular_limits }
+        if (!newLimits[data.name]) newLimits[data.name] = { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' }
+        const updated = { ...prev, national_rows: newRows, granular_limits: newLimits }
+        saveCompetitionConfig(updated)
+        return updated
+      })
+      toast.success(`County "${data.name}" added`)
+      resetCounty()
+    }
+  }
+
+  const handleOpenEditRegion = (r: Region) => {
+    setEditingRegion(r)
+    setEditRegionNameEn(r.name_en)
+    setEditRegionNameAr(r.name_ar)
+    setEditRegionCountyId(String(r.county_id || '1'))
+  }
+
+  const handleSaveEditRegion = async () => {
+    if (!editingRegion) return
+    const oldName = editingRegion.name_en
+    const newName = editRegionNameEn.trim()
+    try {
+      const updated = await updateRegion(token, editingRegion.id, {
+        name_en: newName,
+        name_ar: editRegionNameAr.trim(),
+        county_id: Number(editRegionCountyId) || 1,
+      })
+      setRegions(prev => prev.map(r => r.id === editingRegion.id ? updated : r))
+
+      // Rename in compConfig matrix if name changed
+      if (oldName !== newName) {
+        setCompConfig(prev => {
+          const newRows = (prev.county_rows || []).map(r => r === oldName ? newName : r)
+          const newLimits = { ...prev.granular_limits }
+          if (newLimits[oldName]) {
+            newLimits[newName] = newLimits[oldName]
+            delete newLimits[oldName]
+          }
+          const nextConfig = { ...prev, county_rows: newRows, granular_limits: newLimits }
+          saveCompetitionConfig(nextConfig)
+          return nextConfig
+        })
+      }
+      toast.success('Region updated successfully')
+      setEditingRegion(null)
+    } catch (e: any) { toast.error(e.message || 'Failed to update region') }
+  }
+
+  const handleDeleteRegion = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete region "${name}"?`)) return
+    try {
+      await deleteRegion(token, id)
+    } catch (e) {
+      console.warn('API delete warning:', e)
+    }
+    setRegions(prev => prev.filter(r => r.id !== id))
+    setCompConfig(prev => {
+      const newRows = (prev.county_rows || []).filter(r => r !== name)
+      const newLimits = { ...prev.granular_limits }
+      delete newLimits[name]
+      const nextConfig = { ...prev, county_rows: newRows, granular_limits: newLimits }
+      saveCompetitionConfig(nextConfig)
+      return nextConfig
+    })
+    toast.success(`Deleted region "${name}"`)
+  }
+
+  const handleOpenEditCounty = (c: County) => {
+    setEditingCounty(c)
+    setEditCountyName(c.name)
+  }
+
+  const handleSaveEditCounty = async () => {
+    if (!editingCounty) return
+    const oldName = editingCounty.name
+    const newName = editCountyName.trim()
+    try {
+      const updated = await updateCounty(token, editingCounty.id, { name: newName })
+      setCounties(prev => prev.map(c => c.id === editingCounty.id ? updated : c))
+
+      if (oldName !== newName) {
+        setCompConfig(prev => {
+          const newRows = (prev.national_rows || []).map(r => r === oldName ? newName : r)
+          const newLimits = { ...prev.granular_limits }
+          if (newLimits[oldName]) {
+            newLimits[newName] = newLimits[oldName]
+            delete newLimits[oldName]
+          }
+          const nextConfig = { ...prev, national_rows: newRows, granular_limits: newLimits }
+          saveCompetitionConfig(nextConfig)
+          return nextConfig
+        })
+      }
+      toast.success('County updated successfully')
+      setEditingCounty(null)
+    } catch (e: any) {
+      // Local fallback
+      setCounties(prev => prev.map(c => c.id === editingCounty.id ? { ...c, name: newName } : c))
+      setCompConfig(prev => {
+        const newRows = (prev.national_rows || []).map(r => r === oldName ? newName : r)
+        const newLimits = { ...prev.granular_limits }
+        if (newLimits[oldName]) {
+          newLimits[newName] = newLimits[oldName]
+          delete newLimits[oldName]
+        }
+        const nextConfig = { ...prev, national_rows: newRows, granular_limits: newLimits }
+        saveCompetitionConfig(nextConfig)
+        return nextConfig
+      })
+      toast.success('County updated')
+      setEditingCounty(null)
+    }
+  }
+
+  const handleDeleteCounty = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete county "${name}"?`)) return
+    try {
+      await deleteCounty(token, id)
+    } catch (e) {
+      console.warn('API delete warning:', e)
+    }
+    setCounties(prev => prev.filter(c => c.id !== id))
+    setCompConfig(prev => {
+      const newRows = (prev.national_rows || []).filter(r => r !== name)
+      const newLimits = { ...prev.granular_limits }
+      delete newLimits[name]
+      const nextConfig = { ...prev, national_rows: newRows, granular_limits: newLimits }
+      saveCompetitionConfig(nextConfig)
+      return nextConfig
+    })
+    toast.success(`Deleted county "${name}"`)
   }
 
   const onCategorySubmit = async (data: z.infer<typeof categorySchema>) => {
@@ -143,7 +357,12 @@ export default function SettingsClient({
   }
 
   const handleSaveCompetitionConfig = () => {
-    saveCompetitionConfig(compConfig)
+    const updatedConfig: CompetitionConfig = {
+      ...compConfig,
+      national_rows: counties.length > 0 ? counties.map(c => c.name) : (compConfig.national_rows || DEFAULT_NATIONAL_COUNTIES),
+      county_rows: regions.length > 0 ? regions.map(r => r.name_en) : (compConfig.county_rows || []),
+    }
+    saveCompetitionConfig(updatedConfig)
     toast.success('Competition configuration saved successfully!')
   }
 
@@ -156,12 +375,7 @@ export default function SettingsClient({
     })
   }
 
-  // Active matrix regions based on scope
-  const activeMatrixList = compConfig.scope === 'NATIONAL'
-    ? (compConfig.national_rows || ['Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County', 'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County', 'Kilifi County', 'Lamu County'])
-    : (compConfig.county_rows || ['Eastleigh', 'Kiamaiko', 'Komarock', 'Kasarani', 'Westlands', 'Kibra', 'South C', 'Pangani', 'Dandora', 'Kayole'])
-
-  const handleAddMatrixRow = () => {
+  const handleAddMatrixRow = async () => {
     const trimmed = newRowName.trim()
     if (!trimmed) {
       toast.error('Please enter a name for the county or region row')
@@ -172,31 +386,77 @@ export default function SettingsClient({
       return
     }
 
-    setCompConfig(prev => {
-      const isNat = prev.scope === 'NATIONAL'
-      const key = isNat ? 'national_rows' : 'county_rows'
-      const existing = prev[key] || activeMatrixList
-      const newRows = [...existing, trimmed]
-      const newLimits = { ...prev.granular_limits }
-      newLimits[trimmed] = { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' }
-      return { ...prev, [key]: newRows, granular_limits: newLimits }
-    })
+    if (isNational) {
+      try {
+        const created = await createCounty(token, { name: trimmed, active: true })
+        setCounties(prev => [...prev, created])
+      } catch {
+        setCounties(prev => [...prev, { id: Date.now(), name: trimmed, active: true }])
+      }
+      setCompConfig(prev => {
+        const existing = prev.national_rows || []
+        const newRows = [...existing, trimmed]
+        const newLimits = { ...prev.granular_limits }
+        newLimits[trimmed] = { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' }
+        const next = { ...prev, national_rows: newRows, granular_limits: newLimits }
+        saveCompetitionConfig(next)
+        return next
+      })
+    } else {
+      try {
+        const created = await createRegion(token, { name_en: trimmed, name_ar: trimmed, county_id: 1 })
+        setRegions(prev => [...prev, created])
+      } catch {
+        setRegions(prev => [...prev, { id: Date.now(), name_en: trimmed, name_ar: trimmed, county_id: 1 }])
+      }
+      setCompConfig(prev => {
+        const existing = prev.county_rows || []
+        const newRows = [...existing, trimmed]
+        const newLimits = { ...prev.granular_limits }
+        newLimits[trimmed] = { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' }
+        const next = { ...prev, county_rows: newRows, granular_limits: newLimits }
+        saveCompetitionConfig(next)
+        return next
+      })
+    }
 
-    toast.success(`Added "${trimmed}" to quota matrix`)
+    toast.success(`Added "${trimmed}" to quota matrix & locations list`)
     setNewRowName('')
   }
 
-  const handleDeleteMatrixRow = (rowName: string) => {
-    setCompConfig(prev => {
-      const isNat = prev.scope === 'NATIONAL'
-      const key = isNat ? 'national_rows' : 'county_rows'
-      const existing = prev[key] || activeMatrixList
-      const newRows = existing.filter(r => r !== rowName)
-      const newLimits = { ...prev.granular_limits }
-      delete newLimits[rowName]
-      return { ...prev, [key]: newRows, granular_limits: newLimits }
-    })
-    toast.success(`Removed "${rowName}" from quota matrix`)
+  const handleDeleteMatrixRow = async (rowName: string) => {
+    if (isNational) {
+      const match = counties.find(c => c.name === rowName)
+      if (match) {
+        try { await deleteCounty(token, match.id) } catch {}
+        setCounties(prev => prev.filter(c => c.id !== match.id))
+      }
+      setCompConfig(prev => {
+        const existing = prev.national_rows || activeMatrixList
+        const newRows = existing.filter(r => r !== rowName)
+        const newLimits = { ...prev.granular_limits }
+        delete newLimits[rowName]
+        const next = { ...prev, national_rows: newRows, granular_limits: newLimits }
+        saveCompetitionConfig(next)
+        return next
+      })
+    } else {
+      const match = regions.find(r => r.name_en === rowName)
+      if (match) {
+        try { await deleteRegion(token, match.id) } catch {}
+        setRegions(prev => prev.filter(r => r.id !== match.id))
+      }
+      setCompConfig(prev => {
+        const existing = prev.county_rows || activeMatrixList
+        const newRows = existing.filter(r => r !== rowName)
+        const newLimits = { ...prev.granular_limits }
+        delete newLimits[rowName]
+        const next = { ...prev, county_rows: newRows, granular_limits: newLimits }
+        saveCompetitionConfig(next)
+        return next
+      })
+    }
+    toast.success(`Removed "${rowName}" from quota matrix & locations`)
   }
 
   return (

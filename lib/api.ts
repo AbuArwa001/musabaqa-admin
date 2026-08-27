@@ -115,11 +115,11 @@ export async function rejectInstitution(token: string, id: number, rejection_rea
 // ─── Regions ──────────────────────────────────────────────────────────────────
 
 export interface Region { id: number; name_en: string; name_ar: string; county_id: number }
-export interface County { id: number; name_en: string; name_ar: string; code?: string }
+export interface County { id: number; name: string; active?: boolean }
 
-export async function listRegions(): Promise<Region[]> { return request('/api/v1/regions/') }
+export async function listRegions(): Promise<Region[]> { return request('/api/v1/regions') }
 export async function createRegion(token: string, data: { name_en: string; name_ar: string; county_id: number }): Promise<Region> {
-  return request('/api/v1/regions/', { method: 'POST', body: JSON.stringify(data) }, token)
+  return request('/api/v1/regions', { method: 'POST', body: JSON.stringify(data) }, token)
 }
 export async function updateRegion(token: string, id: number, data: Partial<Region>): Promise<Region> {
   return request(`/api/v1/regions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, token)
@@ -128,9 +128,9 @@ export async function deleteRegion(token: string, id: number): Promise<void> {
   return request(`/api/v1/regions/${id}`, { method: 'DELETE' }, token)
 }
 
-export async function listCounties(): Promise<County[]> { return request('/api/v1/counties/') }
-export async function createCounty(token: string, data: { name_en: string; name_ar: string; code?: string }): Promise<County> {
-  return request('/api/v1/counties/', { method: 'POST', body: JSON.stringify(data) }, token)
+export async function listCounties(): Promise<County[]> { return request('/api/v1/counties') }
+export async function createCounty(token: string, data: { name: string; active?: boolean }): Promise<County> {
+  return request('/api/v1/counties', { method: 'POST', body: JSON.stringify(data) }, token)
 }
 export async function updateCounty(token: string, id: number, data: Partial<County>): Promise<County> {
   return request(`/api/v1/counties/${id}`, { method: 'PATCH', body: JSON.stringify(data) }, token)
