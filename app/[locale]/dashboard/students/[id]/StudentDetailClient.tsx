@@ -14,6 +14,7 @@ import {
   type StudentRead, type InstitutionRead, type Category
 } from '@/lib/api'
 import Modal from '@/components/Modal'
+import ChangeCategoryModal from '@/components/ChangeCategoryModal'
 import { formatDate } from '@/lib/utils'
 
 export default function StudentDetailClient({
@@ -149,7 +150,7 @@ export default function StudentDetailClient({
     toast.info(`Compiling official dossier PDF for ${student.full_name}...`)
     const catName = currentCat ? (locale === 'ar' ? currentCat.name_ar : currentCat.name_en) : "Quran Category"
     const content = `%PDF-1.7\n` +
-      `% Official Musabaqa Candidate Dossier - Religious Attaché, Embassy of Saudi Arabia\n` +
+      `% Official Musabaqa Candidate Dossier - Jamia Mosque Committee, Nairobi\n` +
       `% Candidate Name: ${student.full_name}\n` +
       `% Candidate ID: REF-000${student.id}\n` +
       `% National ID: ${student.national_id || 'N/A'}\n` +
@@ -239,7 +240,7 @@ export default function StudentDetailClient({
               </div>
               <div>
                 <p className="text-[#f6cb7d] text-[10px] sm:text-xs uppercase font-bold tracking-widest font-serif">
-                  RELIGIOUS ATTACHÉ · SAUDI EMBASSY KENYA / JAMIA MOSQUE
+                  JAMIA MOSQUE COMMITTEE · NAIROBI, KENYA
                 </p>
                 <h1 className="font-serif text-xl sm:text-2xl font-bold text-white mt-0.5 capitalize">
                   {student.full_name}
@@ -778,38 +779,19 @@ export default function StudentDetailClient({
         </div>
       )}
 
-      {/* Change Category Modal */}
-      <Modal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} title="Reassign Memorization Category">
-        <div className="space-y-4">
-          <div>
-            <label className="label">Select New Category</label>
-            <select
-              value={selectedCatId}
-              onChange={e => setSelectedCatId(Number(e.target.value))}
-              className="input-field"
-            >
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name_en} ({c.name_ar}) {c.max_age ? `— Max ${c.max_age} yrs` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
-            <input
-              type="checkbox"
-              checked={ageExemption}
-              onChange={e => setAgeExemption(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 accent-[#006838]"
-            />
-            <span>Grant committee age-bracket exemption</span>
-          </label>
-          <div className="flex gap-3 justify-end pt-3">
-            <button onClick={() => setShowCategoryModal(false)} className="btn-secondary">Cancel</button>
-            <button onClick={handleReassignCategory} className="btn-primary">Confirm Reassignment</button>
-          </div>
-        </div>
-      </Modal>
+      {/* Change Memorization Category Modal */}
+      <ChangeCategoryModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        student={student}
+        categories={categories}
+        token={token}
+        locale={locale}
+        onSuccess={(updatedStudent) => {
+          setStudent(updatedStudent)
+          setShowCategoryModal(false)
+        }}
+      />
 
       {/* Reject Modal */}
       <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="Reject Registration Entry" variant="danger">

@@ -88,7 +88,7 @@ export default function DossierGeneratorModal({
   const createCandidateDossierBlob = useCallback((student: StudentRead, fileSizeStr: string) => {
     const categoryName = catMap[student.category_id] || (student.category_id === 1 ? "15 Juz'" : student.category_id === 2 ? "20 Juz'" : "30 Juz'")
     const content = `%PDF-1.7\n` +
-      `% Official Musabaqa Candidate Dossier - Religious Attaché, Embassy of Saudi Arabia\n` +
+      `% Official Musabaqa Candidate Dossier - Jamia Mosque Committee, Nairobi\n` +
       `% Candidate Name: ${student.full_name}\n` +
       `% Candidate ID: REF-000${student.id}\n` +
       `% National ID: ${student.national_id || 'N/A'}\n` +
@@ -352,7 +352,7 @@ export default function DossierGeneratorModal({
         total_candidates: totalCount,
         compiled_candidates: readyCount,
         total_size_mb: totalMbGenerated,
-        organization: 'Religious Attaché, Embassy of Saudi Arabia & Jamia Mosque Committee',
+        organization: 'Jamia Mosque Committee · Nairobi, Kenya',
         candidates: readyItems.map(item => ({
           id: item.student.id,
           name: item.student.full_name,

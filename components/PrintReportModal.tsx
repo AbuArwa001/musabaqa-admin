@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Image from 'next/image'
 import {
   Printer, X, Calendar, CheckSquare, Square,
   Layers, MapPin, Tag, Building2, Eye, Download, Check
@@ -358,21 +359,10 @@ export default function PrintReportModal({
         {/* Masthead Header */}
         <div className="flex items-center justify-between pb-4">
           
-          {/* Left: Embassy of Saudi Arabia Crest Logo & Musabaqa Emblem */}
+          {/* Left: Jamia Mosque Logo & Musabaqa Emblem */}
           <div className="flex items-center gap-4">
-            <div className="w-16 h-20 relative flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 100 120" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-                {/* Ornate Arch Frame */}
-                <path d="M50 5 C25 20 10 40 10 65 V110 H90 V65 C90 40 75 20 50 5 Z" fill="#fcf9f2" stroke="#c99335" strokeWidth="2.5" />
-                <path d="M50 12 C30 25 18 42 18 65 V104 H82 V65 C82 42 70 25 50 12 Z" fill="#ffffff" stroke="#006838" strokeWidth="1.5" />
-                {/* Palm Tree */}
-                <path d="M50 30 V55 M46 36 C42 32 35 34 35 34 M54 36 C58 32 65 34 65 34 M45 44 C38 42 34 46 34 46 M55 44 C62 42 66 46 66 46" stroke="#006838" strokeWidth="2.5" strokeLinecap="round" />
-                {/* Crossed Swords */}
-                <path d="M35 62 L65 78 M65 62 L35 78" stroke="#c99335" strokeWidth="2" strokeLinecap="round" />
-                {/* Open Quran Book */}
-                <path d="M34 85 C42 80 50 82 50 82 C50 82 58 80 66 85 V98 C58 93 50 95 50 95 C50 95 42 93 34 98 Z" fill="#006838" />
-                <path d="M50 82 V95" stroke="#ffffff" strokeWidth="1.5" />
-              </svg>
+            <div className="w-14 h-14 relative flex items-center justify-center shrink-0">
+              <Image src="/logo.png" alt="Jamia Mosque Logo" width={56} height={56} className="object-contain" priority />
             </div>
 
             <div>
@@ -380,7 +370,7 @@ export default function PrintReportModal({
                 Quran Competition 2026
               </h1>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-600 mt-1">
-                Religious Attaché • Embassy of Saudi Arabia
+                Jamia Mosque Committee • Nairobi, Kenya
               </p>
             </div>
           </div>
@@ -598,8 +588,8 @@ export default function PrintReportModal({
         {/* ─── Footer Signatures Section ──────────────────────────────────────── */}
         <div className="mt-12 pt-6 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
           <div>
-            <p className="font-semibold text-gray-800">Official Musabaqa Committee Certification</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">Verified by the Religious Attaché, Embassy of Saudi Arabia &amp; Jamia Mosque Committee</p>
+            <p className="font-semibold text-gray-800">Official Jamia Mosque Committee Certification</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Verified by the Jamia Mosque Committee • Nairobi, Kenya</p>
           </div>
           <div className="text-right">
             <p className="font-mono text-gray-700">Page 1 of 1</p>

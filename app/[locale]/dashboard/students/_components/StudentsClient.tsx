@@ -28,6 +28,7 @@ import Modal from '@/components/Modal'
 import PageHeader from '@/components/PageHeader'
 import DossierGeneratorModal from '@/components/DossierGeneratorModal'
 import PrintReportModal from '@/components/PrintReportModal'
+import ChangeCategoryModal from '@/components/ChangeCategoryModal'
 
 type StudentsClientProps = {
   initialData: StudentRead[]
@@ -1216,42 +1217,19 @@ export default function StudentsClient({
         </div>
       )}
 
-      {/* Reassign Category Modal */}
-      <Modal isOpen={!!reassigningStudent} onClose={() => setReassigningStudent(null)} title="Reassign Memorization Category">
-        <div className="space-y-4">
-          <div>
-            <label className="label">Select New Category</label>
-            <select
-              value={reassignCatId}
-              onChange={e => setReassignCatId(Number(e.target.value))}
-              className="input-field cursor-pointer"
-            >
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>
-                  {isAr ? c.name_ar : c.name_en} ({c.max_age ? `Max ${c.max_age} yrs` : 'Open'})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <label className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={ageExemption}
-              onChange={e => setAgeExemption(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300"
-            />
-            <span className="text-xs font-semibold text-amber-900">
-              Grant Age Exemption (Admin Override)
-            </span>
-          </label>
-
-          <div className="flex gap-3 justify-end pt-2">
-            <button onClick={() => setReassigningStudent(null)} className="btn-secondary">Cancel</button>
-            <button onClick={handleReassignSubmit} className="btn-primary">Update Category</button>
-          </div>
-        </div>
-      </Modal>
+      {/* Change Memorization Category Modal */}
+      <ChangeCategoryModal
+        isOpen={!!reassigningStudent}
+        onClose={() => setReassigningStudent(null)}
+        student={reassigningStudent}
+        categories={categories}
+        token={token}
+        locale={locale}
+        onSuccess={(updatedStudent) => {
+          setData(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s))
+          setReassigningStudent(null)
+        }}
+      />
 
       {/* Bulk Reject Modal */}
       <Modal isOpen={bulkRejectModal} onClose={() => setBulkRejectModal(false)} title={`Reject ${selectedStudentList.length} Selected Candidates`} variant="danger">

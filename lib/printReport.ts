@@ -369,17 +369,10 @@ export function generateOfficialRegistryReport(
     <body>
       <div class="header">
         <div class="header-left">
-          <svg class="crest-box" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 5 C25 20 10 40 10 65 V110 H90 V65 C90 40 75 20 50 5 Z" fill="#fcf9f2" stroke="#c99335" stroke-width="2.5" />
-            <path d="M50 12 C30 25 18 42 18 65 V104 H82 V65 C82 42 70 25 50 12 Z" fill="#ffffff" stroke="#006838" stroke-width="1.5" />
-            <path d="M50 30 V55 M46 36 C42 32 35 34 35 34 M54 36 C58 32 65 34 65 34 M45 44 C38 42 34 46 34 46 M55 44 C62 42 66 46 66 46" stroke="#006838" stroke-width="2.5" stroke-linecap="round" />
-            <path d="M35 62 L65 78 M65 62 L35 78" stroke="#c99335" stroke-width="2" stroke-linecap="round" />
-            <path d="M34 85 C42 80 50 82 50 82 C50 82 58 80 66 85 V98 C58 93 50 95 50 95 C50 95 42 93 34 98 Z" fill="#006838" />
-            <path d="M50 82 V95" stroke="#ffffff" stroke-width="1.5" />
-          </svg>
+          <img src="${typeof window !== 'undefined' ? window.location.origin : ''}/logo.png" alt="Jamia Mosque Logo" class="crest-box" style="width: 68px; height: 68px; object-fit: contain; flex-shrink: 0;" />
           <div class="header-text">
             <h1>Quran Competition ${currentYear}</h1>
-            <p>Religious Attaché · Embassy of Saudi Arabia</p>
+            <p>Jamia Mosque Committee · Nairobi, Kenya</p>
           </div>
         </div>
         <div class="header-right">
@@ -432,8 +425,8 @@ export function generateOfficialRegistryReport(
 
       <div class="footer">
         <div>
-          <p style="font-size: 11px; font-weight: 700; color: #0F172A; margin: 0 0 2px 0;">Official Musabaqa Committee Certification</p>
-          <p style="font-size: 10px; color: #94A3B8; margin: 0;">Verified by the Religious Attaché, Embassy of Saudi Arabia &amp; Jamia Mosque Committee</p>
+          <p style="font-size: 11px; font-weight: 700; color: #0F172A; margin: 0 0 2px 0;">Official Jamia Mosque Committee Certification</p>
+          <p style="font-size: 10px; color: #94A3B8; margin: 0;">Verified by the Jamia Mosque Committee · Nairobi, Kenya</p>
         </div>
         <div class="signature-box">
           <div class="signature-line"></div>
