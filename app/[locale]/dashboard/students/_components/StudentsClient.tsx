@@ -176,51 +176,49 @@ export default function StudentsClient({
   const approvedStudents = data.filter(s => s.review_status === 'APPROVED').length
   const rejectedStudents = data.filter(s => s.review_status === 'REJECTED').length
 
-  const KENYA_COUNTIES = [
-    'Nairobi', 'Mombasa', 'Nakuru', 'Garissa', 'Isiolo', 'Mandera', 'Wajir',
-    'Kisumu', 'Kilifi', 'Kwale', 'Lamu', 'Kajiado', 'Machakos', 'Kiambu',
-    'Uasin Gishu', 'Meru', 'Marsabit', 'Tana River', 'Turkana', 'Samburu',
-    'Kakamega', 'Baringo', 'Bomet', 'Bungoma', 'Busia', 'Elgeyo Marakwet',
-    'Embu', 'Homa Bay', 'Kericho', 'Kirinyaga', 'Kisii', 'Kitui', 'Makueni',
-    'Migori', "Murang'a", 'Nandi', 'Narok', 'Nyamira', 'Nyandarua', 'Nyeri',
-    'Siaya', 'Taita Taveta', 'Tharaka Nithi', 'Trans Nzoia', 'Vihiga', 'West Pokot'
-  ]
-
-  // Distinct locations: If NATIONAL scope -> Kenya Counties; If COUNTY_REGIONAL scope -> Regional Zones
+  // Distinct locations: Harmonized directly from competition settings data
   const distinctLocations = useMemo(() => {
     const locSet = new Set<string>()
 
     if (isNational) {
-      // 1. Configured national rows (counties)
-      ;(compConfig.national_rows || []).forEach(r => {
+      // 1. Read counties configured in competition settings
+      const rows = compConfig.national_rows && compConfig.national_rows.length > 0
+        ? compConfig.national_rows
+        : ['Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County', 'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County', 'Kilifi County', 'Lamu County']
+
+      rows.forEach(r => {
         const clean = r.replace(/\s+County$/i, '').trim()
         if (clean) locSet.add(clean)
       })
-      // 2. Standard 47 Kenya counties
-      KENYA_COUNTIES.forEach(c => locSet.add(c))
-      // 3. Any county/residence found in student dataset
-      data.forEach(s => {
-        if (s.residence) locSet.add(s.residence.replace(/\s+County$/i, '').trim())
-        const c = (s as any).county
-        if (c) locSet.add(String(c).replace(/\s+County$/i, '').trim())
+
+      // 2. Also include any other county row present in granular_limits
+      Object.keys(compConfig.granular_limits || {}).forEach(k => {
+        if (k.toLowerCase().includes('county')) {
+          const clean = k.replace(/\s+County$/i, '').trim()
+          if (clean) locSet.add(clean)
+        }
       })
     } else {
-      // County-level competition: internal regional zones
+      // 1. Read regional zones configured in competition settings
+      const rows = compConfig.county_rows && compConfig.county_rows.length > 0
+        ? compConfig.county_rows
+        : ['Eastleigh', 'Kiamaiko', 'Komarock', 'Kasarani', 'Westlands', 'Kibra', 'South C', 'Pangani', 'Dandora', 'Kayole']
+
+      rows.forEach(r => {
+        if (r && r.trim()) locSet.add(r.trim())
+      })
+
+      // 2. Also include custom regions & database regions configured in settings
+      ;(compConfig.custom_regions || []).forEach(cr => {
+        if (cr.name_en) locSet.add(cr.name_en.trim())
+      })
       regions.forEach(r => {
-        if (r.name_en) locSet.add(r.name_en)
-      })
-      ;(compConfig.county_rows || []).forEach(r => {
-        if (r) locSet.add(r)
-      })
-      data.forEach(s => {
-        if (s.residence) locSet.add(s.residence)
-        const c = (s as any).county
-        if (c) locSet.add(c)
+        if (r.name_en) locSet.add(r.name_en.trim())
       })
     }
 
     return Array.from(locSet).filter(Boolean).sort((a, b) => a.localeCompare(b))
-  }, [isNational, compConfig, regions, data])
+  }, [isNational, compConfig, regions])
 
   // Filtered dataset according to Status, Category, Location (County or Zone), Institution, and Search Query
   const filteredData = useMemo(() => {
