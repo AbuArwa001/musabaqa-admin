@@ -312,7 +312,7 @@
     print-color-adjust: exact !important;
   }
 
-  aside, header, .no-print, nav, button {
+  aside, header, .no-print, nav, button, .sidebar-container {
     display: none !important;
   }
 
@@ -330,6 +330,29 @@
     display: block !important;
   }
 
+  .official-print-report {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .official-print-report table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .official-print-report tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .official-print-report thead {
+    display: table-header-group !important;
+  }
+
   .printable-dossier {
     box-shadow: none !important;
     border: 1px solid #e5e7eb !important;
@@ -342,6 +365,7 @@
 
   @page {
     size: A4 portrait;
-    margin: 8mm;
+    margin: 10mm;
   }
 }
+

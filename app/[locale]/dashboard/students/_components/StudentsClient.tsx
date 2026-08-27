@@ -15,18 +15,19 @@ import { toast } from 'sonner'
 import {
   Check, X, Search, Users, Clock, CheckCircle, XCircle, Loader2,
   FileText, Edit3, Tag, Trash2, Eye, Zap, MapPin, Download, ArrowUpDown, Plus,
-  Save, Mail, User, Calendar, Paperclip, Upload
+  Save, Mail, User, Calendar, Paperclip, Upload, Printer, RefreshCw, FileDown, FileSpreadsheet
 } from 'lucide-react'
 
 import {
   approveStudent, rejectStudent, reassignStudentCategory, updateStudent,
-  bulkSoftDeleteStudents,
+  bulkSoftDeleteStudents, getReportUrl,
   type StudentRead, type InstitutionRead, type Category, type Region
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 import Modal from '@/components/Modal'
 import PageHeader from '@/components/PageHeader'
 import DossierGeneratorModal from '@/components/DossierGeneratorModal'
+import PrintReportModal from '@/components/PrintReportModal'
 
 type StudentsClientProps = {
   initialData: StudentRead[]
@@ -53,6 +54,7 @@ export default function StudentsClient({
   // Modals & Action States
   const [showDossierModal, setShowDossierModal] = useState(false)
   const [showMultiSortModal, setShowMultiSortModal] = useState(false)
+  const [showPrintModal, setShowPrintModal] = useState(false)
 
   const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
@@ -427,6 +429,38 @@ export default function StudentsClient({
     })
   ]
 
+  const handleExportCsv = () => {
+    const rows = table.getFilteredRowModel().rows.map(r => r.original)
+    const headers = ['ID', 'Full Name', 'Category', 'Institution', 'Residence', 'Gender', 'DOB', 'National ID', 'Guardian Phone', 'Email', 'Status']
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(s => [
+        s.id,
+        `"${(s.full_name || '').replace(/"/g, '""')}"`,
+        `"${(catMap[s.category_id]?.name_en || s.category_id)}"`,
+        `"${(instMap[s.institution_id]?.name || s.institution_id)}"`,
+        `"${s.residence || ''}"`,
+        s.gender,
+        s.dob || '',
+        `"${s.national_id || ''}"`,
+        `"${s.guardian_phone || ''}"`,
+        `"${s.email || ''}"`,
+        s.review_status
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Candidates_Registry_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.success(`Exported ${rows.length} candidates to CSV`)
+  }
+
   const table = useReactTable({
     data,
     columns,
@@ -445,6 +479,44 @@ export default function StudentsClient({
       <PageHeader
         title={t.title}
         subtitle={`${totalStudents} total registered contestants across all categories`}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                toast.success('Refreshing candidate records...')
+                setData([...initialData])
+              }}
+              className="p-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 shadow-xs transition-colors cursor-pointer"
+              title="Refresh Records"
+            >
+              <RefreshCw size={15} />
+            </button>
+            <button
+              onClick={() => setShowPrintModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:text-gray-900 hover:bg-gray-50 font-bold text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <Printer size={15} className="text-gray-600" />
+              <span>Print Report</span>
+            </button>
+            <button
+              onClick={handleExportCsv}
+              className="px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:text-gray-900 hover:bg-gray-50 font-bold text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <FileDown size={15} className="text-emerald-700" />
+              <span>Export List (CSV)</span>
+            </button>
+            <button
+              onClick={() => {
+                toast.info('Downloading normalized analytics dataset (.xlsx)...')
+                window.open(getReportUrl('power-bi'), '_blank')
+              }}
+              className="px-3.5 py-2 rounded-xl bg-[#1a1512] text-[#c99335] hover:text-amber-300 border border-[#2d2520] font-bold text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            >
+              <FileSpreadsheet size={15} className="text-[#c99335]" />
+              <span>Analytics Export (.xlsx)</span>
+            </button>
+          </div>
+        }
       />
 
       {/* Stats summary row */}
@@ -611,6 +683,17 @@ export default function StudentsClient({
         categories={categories}
         locale={locale}
         token={token}
+      />
+
+      {/* Official Print Premium Report Modal & Printable Layout */}
+      <PrintReportModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        students={data}
+        categories={categories}
+        institutions={institutions}
+        locale={locale}
+        selectedStudentIds={selectedStudentList.map(s => s.id)}
       />
 
       {/* Multi-Row / Multi-Column Sorting Modal (Ultra-Premium Jamia Theme) */}

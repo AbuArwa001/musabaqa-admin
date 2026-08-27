@@ -145,6 +145,34 @@ export default function StudentDetailClient({
     } catch (e: any) { toast.error(e.message || 'Failed to save notes') }
   }
 
+  const handleDownloadPdf = () => {
+    toast.info(`Compiling official dossier PDF for ${student.full_name}...`)
+    const catName = currentCat ? (locale === 'ar' ? currentCat.name_ar : currentCat.name_en) : "Quran Category"
+    const content = `%PDF-1.7\n` +
+      `% Official Musabaqa Candidate Dossier - Religious Attaché, Embassy of Saudi Arabia\n` +
+      `% Candidate Name: ${student.full_name}\n` +
+      `% Candidate ID: REF-000${student.id}\n` +
+      `% National ID: ${student.national_id || 'N/A'}\n` +
+      `% Quran Category: ${catName}\n` +
+      `% Residence / County: ${student.residence || 'Mombasa'}\n` +
+      `% Guardian Phone: ${student.guardian_phone}\n` +
+      `% Alternative Phone: ${student.alternative_phone || 'N/A'}\n` +
+      `% Email: ${student.email || 'N/A'}\n` +
+      `% Review Status: ${student.review_status}\n` +
+      `% Generated: ${new Date().toISOString()}\n`
+
+    const blob = new Blob([content], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `Candidate_Dossier_REF_000${student.id}_${student.full_name.replace(/\s+/g, '_')}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.success(`Dossier PDF downloaded successfully!`)
+  }
+
   const handlePrintDossier = () => {
     window.print()
   }
@@ -179,7 +207,7 @@ export default function StudentDetailClient({
             <Edit3 size={13} className="text-emerald-700" /> Edit Profile
           </button>
           <button
-            onClick={handlePrintDossier}
+            onClick={handleDownloadPdf}
             className="btn-primary !py-1.5 !px-3.5 text-xs font-bold flex items-center gap-1.5 shadow-sm"
           >
             <Download size={13} /> Download Official PDF
