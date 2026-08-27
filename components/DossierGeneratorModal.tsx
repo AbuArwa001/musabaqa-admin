@@ -8,7 +8,7 @@ import {
   RefreshCw, AlertTriangle
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { StudentRead, Category } from '@/lib/api'
+import { getStudentPdfUrl, type StudentRead, type Category } from '@/lib/api'
 
 interface DossierGeneratorModalProps {
   isOpen: boolean
