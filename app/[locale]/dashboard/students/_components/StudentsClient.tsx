@@ -14,8 +14,9 @@ import {
 import { toast } from 'sonner'
 import {
   Check, X, Search, Users, Clock, CheckCircle, XCircle, Loader2,
-  FileText, Edit3, Tag, Trash2, Eye, Zap, MapPin, Download, ArrowUpDown, Plus,
-  Save, Mail, User, Calendar, Paperclip, Upload, Printer, RefreshCw, FileDown, FileSpreadsheet
+  FileText, Edit3, Tag, Trash2, Eye, Zap, MapPin, Download, ArrowUpDown, ArrowUp, ArrowDown, Plus,
+  Save, Mail, User, Calendar, Paperclip, Upload, Printer, RefreshCw, FileDown, FileSpreadsheet,
+  RotateCcw, Filter
 } from 'lucide-react'
 
 import {
@@ -52,6 +53,12 @@ export default function StudentsClient({
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
+  // Filter States
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED'>('ALL')
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL')
+  const [institutionFilter, setInstitutionFilter] = useState<string>('ALL')
+  const [locationFilter, setLocationFilter] = useState<string>('ALL')
+
   // Modals & Action States
   const [showDossierModal, setShowDossierModal] = useState(false)
   const [showMultiSortModal, setShowMultiSortModal] = useState(false)
@@ -87,7 +94,7 @@ export default function StudentsClient({
 
   const [approvingId, setApprovingId] = useState<number | null>(null)
 
-  // Multi-Sort Rules state (Ultra-Premium Multi-Column / Multi-Row Sorting)
+  // Multi-Sort Rules state
   const [sortRules, setSortRules] = useState<Array<{ id: string; desc: boolean }>>([
     { id: 'full_name', desc: false },
     { id: 'institution_id', desc: true },
@@ -153,9 +160,103 @@ export default function StudentsClient({
   const approvedStudents = data.filter(s => s.review_status === 'APPROVED').length
   const rejectedStudents = data.filter(s => s.review_status === 'REJECTED').length
 
+  // Distinct locations from data & regions for dropdown filtering
+  const distinctLocations = useMemo(() => {
+    const locSet = new Set<string>()
+    regions.forEach(r => {
+      if (r.name_en) locSet.add(r.name_en)
+    })
+    data.forEach(s => {
+      if (s.residence) locSet.add(s.residence)
+      const c = (s as any).county
+      if (c) locSet.add(c)
+    })
+    return Array.from(locSet).filter(Boolean).sort()
+  }, [regions, data])
+
+  // Filtered dataset according to Status, Category, Location, Institution, and Search Query
+  const filteredData = useMemo(() => {
+    return data.filter(student => {
+      // 1. Status Filter
+      if (statusFilter !== 'ALL' && student.review_status !== statusFilter) {
+        return false
+      }
+      // 2. Category Filter
+      if (categoryFilter !== 'ALL' && String(student.category_id) !== String(categoryFilter)) {
+        return false
+      }
+      // 3. Institution Filter
+      if (institutionFilter !== 'ALL' && String(student.institution_id) !== String(institutionFilter)) {
+        return false
+      }
+      // 4. Location Filter (region / residence / county)
+      if (locationFilter !== 'ALL') {
+        const inst = instMap[student.institution_id]
+        const reg = inst?.region_id ? regMap[inst.region_id] : null
+        const regEn = reg?.name_en?.toLowerCase() || ''
+        const regAr = reg?.name_ar?.toLowerCase() || ''
+        const residence = (student.residence || '').toLowerCase()
+        const county = ((student as any).county || '').toLowerCase()
+        const targetLoc = locationFilter.toLowerCase()
+
+        const match =
+          regEn.includes(targetLoc) ||
+          regAr.includes(targetLoc) ||
+          residence.includes(targetLoc) ||
+          county.includes(targetLoc)
+
+        if (!match) return false
+      }
+      // 5. Global Search Text
+      if (globalFilter.trim()) {
+        const q = globalFilter.toLowerCase().trim()
+        const instName = (instMap[student.institution_id]?.name || '').toLowerCase()
+        const cat = catMap[student.category_id]
+        const catName = `${cat?.name_en || ''} ${cat?.name_ar || ''}`.toLowerCase()
+        const name = (student.full_name || '').toLowerCase()
+        const phone = (student.guardian_phone || '').toLowerCase()
+        const altPhone = (student.alternative_phone || '').toLowerCase()
+        const email = (student.email || '').toLowerCase()
+        const nationalId = (student.national_id || '').toLowerCase()
+        const refId = `ref-000${student.id}`.toLowerCase()
+        const residence = (student.residence || '').toLowerCase()
+
+        const match =
+          name.includes(q) ||
+          phone.includes(q) ||
+          altPhone.includes(q) ||
+          email.includes(q) ||
+          nationalId.includes(q) ||
+          refId.includes(q) ||
+          instName.includes(q) ||
+          catName.includes(q) ||
+          residence.includes(q)
+
+        if (!match) return false
+      }
+      return true
+    })
+  }, [data, statusFilter, categoryFilter, institutionFilter, locationFilter, globalFilter, instMap, catMap, regMap])
+
+  const hasActiveFilters =
+    statusFilter !== 'ALL' ||
+    categoryFilter !== 'ALL' ||
+    institutionFilter !== 'ALL' ||
+    locationFilter !== 'ALL' ||
+    globalFilter.trim() !== ''
+
+  const handleClearAllFilters = () => {
+    setStatusFilter('ALL')
+    setCategoryFilter('ALL')
+    setInstitutionFilter('ALL')
+    setLocationFilter('ALL')
+    setGlobalFilter('')
+    toast.info('All filters cleared')
+  }
+
   const selectedStudentList = useMemo(() => {
-    return Object.keys(rowSelection).filter(k => rowSelection[k]).map(idx => data[Number(idx)]).filter(Boolean)
-  }, [rowSelection, data])
+    return Object.keys(rowSelection).filter(k => rowSelection[k]).map(idx => filteredData[Number(idx)]).filter(Boolean)
+  }, [rowSelection, filteredData])
 
   const calculateAgeInfo = (dobString: string) => {
     if (!dobString) return { age: 0, formattedDob: '—' }
@@ -307,12 +408,15 @@ export default function StudentsClient({
           className="w-4 h-4 rounded border-gray-300 cursor-pointer accent-[#006838]"
         />
       ),
+      enableSorting: false,
     }),
     columnHelper.accessor('full_name', {
+      id: 'full_name',
       header: 'Candidate',
+      enableSorting: true,
+      sortingFn: 'alphanumeric',
       cell: ({ row }) => {
         const s = row.original
-        const inst = instMap[s.institution_id]
         return (
           <div className="py-1">
             <Link
@@ -337,7 +441,16 @@ export default function StudentsClient({
       }
     }),
     columnHelper.accessor('category_id', {
+      id: 'category_id',
       header: 'Category & Age',
+      enableSorting: true,
+      sortingFn: (rowA, rowB) => {
+        const catA = catMap[rowA.original.category_id]?.name_en || ''
+        const catB = catMap[rowB.original.category_id]?.name_en || ''
+        const comp = catA.localeCompare(catB)
+        if (comp !== 0) return comp
+        return (new Date(rowA.original.dob).getTime() || 0) - (new Date(rowB.original.dob).getTime() || 0)
+      },
       cell: ({ row }) => {
         const s = row.original
         const cat = catMap[s.category_id]
@@ -355,7 +468,14 @@ export default function StudentsClient({
       }
     }),
     columnHelper.accessor('institution_id', {
+      id: 'institution_id',
       header: 'Location & Institution',
+      enableSorting: true,
+      sortingFn: (rowA, rowB) => {
+        const instA = instMap[rowA.original.institution_id]?.name || ''
+        const instB = instMap[rowB.original.institution_id]?.name || ''
+        return instA.localeCompare(instB)
+      },
       cell: ({ row }) => {
         const s = row.original
         const inst = instMap[s.institution_id]
@@ -375,7 +495,10 @@ export default function StudentsClient({
       }
     }),
     columnHelper.accessor('review_status', {
+      id: 'review_status',
       header: 'Status',
+      enableSorting: true,
+      sortingFn: 'alphanumeric',
       cell: info => {
         const val = info.getValue()
         return (
@@ -388,6 +511,7 @@ export default function StudentsClient({
     columnHelper.display({
       id: 'actions',
       header: 'Actions',
+      enableSorting: false,
       cell: ({ row }) => {
         const s = row.original
         const isApproving = approvingId === s.id
@@ -431,7 +555,7 @@ export default function StudentsClient({
   ]
 
   const handleExportCsv = () => {
-    const rows = table.getFilteredRowModel().rows.map(r => r.original)
+    const rows = table.getSortedRowModel().rows.map(r => r.original)
     const headers = ['ID', 'Full Name', 'Category', 'Institution', 'Residence', 'Gender', 'DOB', 'National ID', 'Guardian Phone', 'Email', 'Status']
     const csvContent = [
       headers.join(','),
@@ -463,15 +587,13 @@ export default function StudentsClient({
   }
 
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
-    state: { sorting, globalFilter, rowSelection },
+    state: { sorting, rowSelection },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
   })
 
@@ -479,7 +601,7 @@ export default function StudentsClient({
     <div className="space-y-6">
       <PageHeader
         title={t.title}
-        subtitle={`${totalStudents} total registered contestants across all categories`}
+        subtitle={`${filteredData.length} of ${totalStudents} registered contestants displayed`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -520,30 +642,39 @@ export default function StudentsClient({
         }
       />
 
-      {/* Stats summary row */}
+      {/* Stats summary row (Interactive Filter Cards) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total Active', value: totalStudents,    icon: <Users size={15} />,       badge: 'bg-purple-50 text-purple-700 border-purple-200', numColor: 'text-purple-950' },
-          { label: 'Pending',      value: pendingStudents,  icon: <Clock size={15} />,       badge: 'bg-amber-50 text-amber-700 border-amber-200',   numColor: 'text-amber-950' },
-          { label: 'Approved',     value: approvedStudents, icon: <CheckCircle size={15} />, badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', numColor: 'text-emerald-950' },
-          { label: 'Rejected',     value: rejectedStudents, icon: <XCircle size={15} />,     badge: 'bg-rose-50 text-rose-700 border-rose-200',       numColor: 'text-rose-950' },
-        ].map(stat => (
-          <div
-            key={stat.label}
-            className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center justify-between"
-          >
-            <div>
-              <p className={`text-2xl font-bold font-serif ${stat.numColor}`}>{stat.value}</p>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-0.5">{stat.label}</p>
-            </div>
-            <div className={`p-2 rounded-lg border ${stat.badge}`}>
-              {stat.icon}
-            </div>
-          </div>
-        ))}
+          { key: 'ALL',            label: 'Total Active', value: totalStudents,    icon: <Users size={15} />,       badge: 'bg-purple-50 text-purple-700 border-purple-200', numColor: 'text-purple-950', ring: 'ring-2 ring-purple-600 border-purple-400 bg-purple-50/20' },
+          { key: 'PENDING_REVIEW', label: 'Pending',      value: pendingStudents,  icon: <Clock size={15} />,       badge: 'bg-amber-50 text-amber-700 border-amber-200',   numColor: 'text-amber-950',   ring: 'ring-2 ring-amber-600 border-amber-400 bg-amber-50/20' },
+          { key: 'APPROVED',       label: 'Approved',     value: approvedStudents, icon: <CheckCircle size={15} />, badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', numColor: 'text-emerald-950', ring: 'ring-2 ring-emerald-600 border-emerald-400 bg-emerald-50/20' },
+          { key: 'REJECTED',       label: 'Rejected',     value: rejectedStudents, icon: <XCircle size={15} />,     badge: 'bg-rose-50 text-rose-700 border-rose-200',       numColor: 'text-rose-950',       ring: 'ring-2 ring-rose-600 border-rose-400 bg-rose-50/20' },
+        ].map(stat => {
+          const isSelected = statusFilter === stat.key
+          return (
+            <button
+              key={stat.label}
+              type="button"
+              onClick={() => setStatusFilter(stat.key as any)}
+              className={`text-left rounded-xl p-4 shadow-sm flex items-center justify-between transition-all cursor-pointer ${
+                isSelected
+                  ? `${stat.ring} shadow-md`
+                  : 'bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
+              }`}
+            >
+              <div>
+                <p className={`text-2xl font-bold font-serif ${stat.numColor}`}>{stat.value}</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-0.5">{stat.label}</p>
+              </div>
+              <div className={`p-2 rounded-lg border ${stat.badge}`}>
+                {stat.icon}
+              </div>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Floating Multi-Select Bulk Action Bar (matches reference screenshot) */}
+      {/* Floating Multi-Select Bulk Action Bar */}
       {selectedStudentList.length > 0 && (
         <div className="bg-[#1a1512] text-white p-4 rounded-2xl shadow-xl flex flex-wrap items-center justify-between gap-4 border border-[#2d2520] animate-in slide-in-from-top-2">
           <div className="flex items-center gap-3">
@@ -582,7 +713,7 @@ export default function StudentsClient({
             </button>
             <button
               onClick={() => setRowSelection({})}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white cursor-pointer"
             >
               Clear
             </button>
@@ -590,48 +721,168 @@ export default function StudentsClient({
         </div>
       )}
 
-      {/* Toolbar: Search + Multi-Level Sort button */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="relative w-full sm:max-w-md">
-          <Search
-            size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder="Search candidate name, institution, phone, or email..."
-            value={globalFilter ?? ''}
-            onChange={e => setGlobalFilter(e.target.value)}
-            className="input-field pl-10 text-xs"
-          />
+      {/* Toolbar: Search + Category / Location / Status Filter Selects + Multi-Sort */}
+      <div className="space-y-3">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          
+          {/* Search bar */}
+          <div className="relative flex-1 min-w-[260px] max-w-lg">
+            <Search
+              size={16}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+            <input
+              type="text"
+              placeholder="Search candidate name, institution, phone, or email..."
+              value={globalFilter}
+              onChange={e => setGlobalFilter(e.target.value)}
+              className="input-field pl-10 text-xs"
+            />
+            {globalFilter && (
+              <button
+                onClick={() => setGlobalFilter('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Filter Selects */}
+          <div className="flex flex-wrap items-center gap-2">
+            
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as any)}
+              className="input-field !py-2 text-xs !w-auto min-w-[125px] font-medium bg-white cursor-pointer"
+            >
+              <option value="ALL">Status: All</option>
+              <option value="PENDING_REVIEW">Status: Pending</option>
+              <option value="APPROVED">Status: Approved</option>
+              <option value="REJECTED">Status: Rejected</option>
+            </select>
+
+            {/* Category Filter */}
+            <select
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+              className="input-field !py-2 text-xs !w-auto min-w-[135px] font-medium bg-white cursor-pointer"
+            >
+              <option value="ALL">Category: All</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>
+                  {isAr ? c.name_ar : c.name_en}
+                </option>
+              ))}
+            </select>
+
+            {/* Location / Region Filter */}
+            <select
+              value={locationFilter}
+              onChange={e => setLocationFilter(e.target.value)}
+              className="input-field !py-2 text-xs !w-auto min-w-[135px] font-medium bg-white cursor-pointer"
+            >
+              <option value="ALL">Location: All</option>
+              {distinctLocations.map(loc => (
+                <option key={loc} value={loc}>
+                  📍 {loc}
+                </option>
+              ))}
+            </select>
+
+            {/* Institution Filter */}
+            <select
+              value={institutionFilter}
+              onChange={e => setInstitutionFilter(e.target.value)}
+              className="input-field !py-2 text-xs !w-auto min-w-[150px] font-medium bg-white hidden xl:inline-block cursor-pointer"
+            >
+              <option value="ALL">Institution: All</option>
+              {institutions.map(inst => (
+                <option key={inst.id} value={inst.id}>
+                  🏛️ {inst.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearAllFilters}
+                className="px-2.5 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1 transition-colors cursor-pointer"
+                title="Reset all filters"
+              >
+                <RotateCcw size={12} />
+                <span>Reset</span>
+              </button>
+            )}
+
+            {/* Multi-Level Sort */}
+            <button
+              onClick={() => setShowMultiSortModal(true)}
+              className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-2 font-bold ml-auto sm:ml-0"
+            >
+              <Zap size={14} className="text-[#c99335]" />
+              <span className="hidden sm:inline">Multi-Level Sort</span>
+              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded-md">
+                {sorting.length || 1} tier
+              </span>
+            </button>
+
+            {/* Dossier Generator */}
+            <button
+              onClick={() => {
+                if (selectedStudentList.length === 0) {
+                  toast.info('Select candidates using the checkboxes to generate dossiers')
+                  return
+                }
+                setShowDossierModal(true)
+              }}
+              className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-1.5 font-bold"
+            >
+              <FileText size={14} className="text-emerald-700" />
+              <span className="hidden sm:inline">Dossier Generator</span>
+            </button>
+
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowMultiSortModal(true)}
-            className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-2 font-bold"
-          >
-            <Zap size={14} className="text-[#c99335]" />
-            <span>Multi-Level Sort</span>
-            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded-md">
-              {sorting.length || 1} tier
-            </span>
-          </button>
-
-          <button
-            onClick={() => {
-              if (selectedStudentList.length === 0) {
-                toast.info('Select candidates using the checkboxes to generate dossiers')
-                return
-              }
-              setShowDossierModal(true)
-            }}
-            className="btn-secondary !py-2 !px-3 text-xs flex items-center gap-1.5 font-bold"
-          >
-            <FileText size={14} className="text-emerald-700" />
-            <span>Dossier Generator</span>
-          </button>
-        </div>
+        {/* Active Filter Chips bar */}
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
+            <span className="text-gray-400 font-semibold text-[11px]">Active Filters ({filteredData.length} matches):</span>
+            {statusFilter !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-medium">
+                Status: {statusFilter === 'PENDING_REVIEW' ? 'Pending' : statusFilter === 'APPROVED' ? 'Approved' : 'Rejected'}
+                <button onClick={() => setStatusFilter('ALL')} className="hover:text-amber-950 font-bold ml-0.5 cursor-pointer">✕</button>
+              </span>
+            )}
+            {categoryFilter !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium">
+                Category: {catMap[Number(categoryFilter)]?.name_en || categoryFilter}
+                <button onClick={() => setCategoryFilter('ALL')} className="hover:text-emerald-950 font-bold ml-0.5 cursor-pointer">✕</button>
+              </span>
+            )}
+            {locationFilter !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200 text-xs font-medium">
+                Location: {locationFilter}
+                <button onClick={() => setLocationFilter('ALL')} className="hover:text-sky-950 font-bold ml-0.5 cursor-pointer">✕</button>
+              </span>
+            )}
+            {institutionFilter !== 'ALL' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-xs font-medium">
+                Institution: {instMap[Number(institutionFilter)]?.name || institutionFilter}
+                <button onClick={() => setInstitutionFilter('ALL')} className="hover:text-purple-950 font-bold ml-0.5 cursor-pointer">✕</button>
+              </span>
+            )}
+            {globalFilter.trim() && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-800 border border-gray-200 text-xs font-medium">
+                Query: "{globalFilter}"
+                <button onClick={() => setGlobalFilter('')} className="hover:text-black font-bold ml-0.5 cursor-pointer">✕</button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Candidates Table Card */}
@@ -641,11 +892,45 @@ export default function StudentsClient({
             <thead className="bg-gray-50/80 border-b border-gray-200">
               {table.getHeaderGroups().map(hg => (
                 <tr key={hg.id}>
-                  {hg.headers.map(h => (
-                    <th key={h.id} className="table-th">
-                      {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
-                    </th>
-                  ))}
+                  {hg.headers.map(h => {
+                    const canSort = h.column.getCanSort()
+                    const isSorted = h.column.getIsSorted()
+                    return (
+                      <th
+                        key={h.id}
+                        className={`table-th ${
+                          canSort
+                            ? 'cursor-pointer select-none hover:bg-gray-100/90 transition-colors group'
+                            : ''
+                        }`}
+                        onClick={canSort ? h.column.getToggleSortingHandler() : undefined}
+                        title={
+                          canSort
+                            ? `Click to sort by ${typeof h.column.columnDef.header === 'string' ? h.column.columnDef.header : 'column'} (${
+                                isSorted === 'asc' ? 'Descending next' : isSorted === 'desc' ? 'Clear sort' : 'Ascending next'
+                              })`
+                            : undefined
+                        }
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>{h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}</span>
+                          {canSort && (
+                            <span className="inline-flex items-center shrink-0">
+                              {isSorted === 'asc' && (
+                                <ArrowUp size={13} className="text-emerald-700 font-extrabold" />
+                              )}
+                              {isSorted === 'desc' && (
+                                <ArrowDown size={13} className="text-emerald-700 font-extrabold" />
+                              )}
+                              {!isSorted && (
+                                <ArrowUpDown size={12} className="text-gray-400 opacity-40 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    )
+                  })}
                 </tr>
               ))}
             </thead>
@@ -654,7 +939,15 @@ export default function StudentsClient({
                 <tr>
                   <td colSpan={columns.length} className="text-center py-16 text-gray-400">
                     <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm font-medium">No candidates match your search</p>
+                    <p className="text-sm font-medium">No candidates match your filters</p>
+                    {hasActiveFilters && (
+                      <button
+                        onClick={handleClearAllFilters}
+                        className="mt-2 text-xs font-bold text-emerald-800 hover:underline cursor-pointer inline-block"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (

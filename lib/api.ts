@@ -60,6 +60,21 @@ export async function loginStaff(email: string, password: string): Promise<Token
   return res.json()
 }
 
+export async function refreshStaffSession(token: string): Promise<TokenResponse> {
+  const res = await fetch(`${API_URL}/api/v1/auth/staff/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, err.detail || 'Session refresh failed')
+  }
+  return res.json()
+}
+
 // ─── Institutions ─────────────────────────────────────────────────────────────
 
 export interface InstitutionRead {
