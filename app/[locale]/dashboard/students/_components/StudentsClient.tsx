@@ -20,7 +20,7 @@ import {
 
 import {
   approveStudent, rejectStudent, reassignStudentCategory, updateStudent,
-  bulkSoftDeleteStudents, getReportUrl,
+  bulkSoftDeleteStudents, getReportUrl, getExportAnalyticsUrl,
   type StudentRead, type InstitutionRead, type Category, type Region
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
@@ -509,7 +509,7 @@ export default function StudentsClient({
             <button
               onClick={() => {
                 toast.info('Downloading normalized analytics dataset (.xlsx)...')
-                window.open(getReportUrl('power-bi'), '_blank')
+                window.open(getExportAnalyticsUrl('timeline'), '_blank')
               }}
               className="px-3.5 py-2 rounded-xl bg-[#1a1512] text-[#c99335] hover:text-amber-300 border border-[#2d2520] font-bold text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
             >

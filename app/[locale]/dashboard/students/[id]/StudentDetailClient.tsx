@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner'
 import {
   approveStudent, rejectStudent, updateStudent, reassignStudentCategory, softDeleteStudent,
+  getStudentPdfUrl,
   type StudentRead, type InstitutionRead, type Category
 } from '@/lib/api'
 import Modal from '@/components/Modal'
@@ -146,8 +147,29 @@ export default function StudentDetailClient({
     } catch (e: any) { toast.error(e.message || 'Failed to save notes') }
   }
 
-  const handleDownloadPdf = () => {
-    toast.info(`Compiling official dossier PDF for ${student.full_name}...`)
+  const handleDownloadPdf = async () => {
+    toast.info(`Compiling certified official dossier PDF for ${student.full_name}...`)
+    try {
+      const res = await fetch(getStudentPdfUrl(student.id), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      })
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `REF-${String(student.id).padStart(5, '0')}_${student.full_name.replace(/\s+/g, '_')}_Dossier.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        toast.success(`Official certified dossier PDF downloaded!`)
+        return
+      }
+    } catch (e) {
+      console.warn('Backend PDF download failed, falling back to client generation:', e)
+    }
+
     const catName = currentCat ? (locale === 'ar' ? currentCat.name_ar : currentCat.name_en) : "Quran Category"
     const content = `%PDF-1.7\n` +
       `% Official Musabaqa Candidate Dossier - Jamia Mosque Committee, Nairobi\n` +
@@ -166,7 +188,7 @@ export default function StudentDetailClient({
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `Candidate_Dossier_REF_000${student.id}_${student.full_name.replace(/\s+/g, '_')}.pdf`
+    a.download = `REF-${String(student.id).padStart(5, '0')}_${student.full_name.replace(/\s+/g, '_')}_Dossier.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)

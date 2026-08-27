@@ -190,6 +190,22 @@ export async function sendRegretEmail(token: string, id: number): Promise<void> 
   return request(`/api/v1/students/${id}/regret-email`, { method: 'POST' }, token)
 }
 
+export async function getPhotoUrl(token: string, id: number): Promise<{ url: string | null }> {
+  return request(`/api/v1/students/${id}/photo_url/`, {}, token)
+}
+
+export async function getDocUrl(token: string, id: number): Promise<{ url: string | null }> {
+  return request(`/api/v1/students/${id}/doc_url/`, {}, token)
+}
+
+export function getStudentPdfUrl(id: number): string {
+  return `${API_URL}/api/v1/students/${id}/download_pdf/`
+}
+
+export function getExportAnalyticsUrl(pivot: string = 'timeline'): string {
+  return `${API_URL}/api/v1/students/export_analysis/?pivot=${pivot}`
+}
+
 export async function bulkSendRegretEmails(token: string, student_ids: number[]): Promise<void> {
   return request('/api/v1/students/bulk/regret-email', {
     method: 'POST', body: JSON.stringify({ student_ids })
