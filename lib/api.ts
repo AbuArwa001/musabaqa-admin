@@ -357,6 +357,8 @@ export interface CompetitionConfig {
   county_limit: number;
   granular_limits: Record<string, Record<string, number | 'Def'>>;
   custom_regions: Array<{ id: string; name_en: string; name_ar: string }>;
+  national_rows: string[];
+  county_rows: string[];
 }
 
 const DEFAULT_COMPETITION_CONFIG: CompetitionConfig = {
@@ -374,17 +376,23 @@ const DEFAULT_COMPETITION_CONFIG: CompetitionConfig = {
   category_limit: 10,
   county_limit: 10,
   granular_limits: {
-    'Isiolo': { '30': 8, '20': 9, '15': 11, '5': 12 },
-    'Nairobi': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
-    'Mandera': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
-    'Nakuru': { '30': 8, '20': 'Def', '15': 11, '5': 11 },
-    'Wajir': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
-    'Mombasa': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
-    'Garissa': { '30': 11, '20': 8, '15': 9, '5': 12 },
+    'Isiolo County': { '30': 8, '20': 9, '15': 11, '5': 12 },
+    'Nairobi County': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Mandera County': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Nakuru County': { '30': 8, '20': 'Def', '15': 11, '5': 11 },
+    'Wajir County': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Mombasa County': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Garissa County': { '30': 11, '20': 8, '15': 9, '5': 12 },
     'Eastleigh': { '30': 10, '20': 10, '15': 12, '5': 15 },
     'Kiamaiko': { '30': 8, '20': 8, '15': 10, '5': 12 },
     'Komarock': { '30': 6, '20': 8, '15': 8, '5': 10 },
     'Kasarani': { '30': 8, '20': 8, '15': 10, '5': 10 },
+    'Westlands': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Kibra': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'South C': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Pangani': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Dandora': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
+    'Kayole': { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' },
   },
   custom_regions: [
     { id: 'eastleigh', name_en: 'Eastleigh', name_ar: 'إيستلي' },
@@ -393,6 +401,15 @@ const DEFAULT_COMPETITION_CONFIG: CompetitionConfig = {
     { id: 'kasarani', name_en: 'Kasarani', name_ar: 'كاساراني' },
     { id: 'westlands', name_en: 'Westlands', name_ar: 'ويستلاندز' },
     { id: 'kibra', name_en: 'Kibra', name_ar: 'كيبرا' },
+  ],
+  national_rows: [
+    'Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County',
+    'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County',
+    'Kilifi County', 'Lamu County'
+  ],
+  county_rows: [
+    'Eastleigh', 'Kiamaiko', 'Komarock', 'Kasarani', 'Westlands',
+    'Kibra', 'South C', 'Pangani', 'Dandora', 'Kayole'
   ]
 }
 

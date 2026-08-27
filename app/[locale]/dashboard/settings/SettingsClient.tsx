@@ -10,7 +10,7 @@ import {
   type Region, type Category, type AdminUserRead, type CompetitionConfig
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
-import { UserPlus, MapPin, List, Settings, Trophy, Calendar, MapPin as LocationIcon, FileText, Sliders, Save, Globe, Flag, Edit, Plus, Check } from 'lucide-react'
+import { UserPlus, MapPin, List, Settings, Trophy, Calendar, MapPin as LocationIcon, FileText, Sliders, Save, Globe, Flag, Edit, Plus, Check, Trash2 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Modal from '@/components/Modal'
 
@@ -62,6 +62,9 @@ export default function SettingsClient({
   const [catMinAge, setCatMinAge] = useState<string>('0')
   const [catMaxAge, setCatMaxAge] = useState<string>('99')
   const [catOrder, setCatOrder] = useState<string>('1')
+
+  // Matrix Row Add state
+  const [newRowName, setNewRowName] = useState('')
   
   const { register: regUser, handleSubmit: handleUser, reset: resetUser, watch: watchUser, formState: { isSubmitting: isSubUser } } = useForm<z.infer<typeof userSchema>>({ resolver: zodResolver(userSchema) })
   const { register: regRegion, handleSubmit: handleRegion, reset: resetRegion, formState: { isSubmitting: isSubRegion } } = useForm<z.infer<typeof regionSchema>>({ resolver: zodResolver(regionSchema) })
@@ -155,8 +158,46 @@ export default function SettingsClient({
 
   // Active matrix regions based on scope
   const activeMatrixList = compConfig.scope === 'NATIONAL'
-    ? ['Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County', 'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County', 'Kilifi County', 'Lamu County']
-    : ['Eastleigh', 'Kiamaiko', 'Komarock', 'Kasarani', 'Westlands', 'Kibra', 'South C', 'Pangani', 'Dandora', 'Kayole']
+    ? (compConfig.national_rows || ['Nairobi County', 'Mombasa County', 'Nakuru County', 'Garissa County', 'Isiolo County', 'Mandera County', 'Wajir County', 'Kisumu County', 'Kilifi County', 'Lamu County'])
+    : (compConfig.county_rows || ['Eastleigh', 'Kiamaiko', 'Komarock', 'Kasarani', 'Westlands', 'Kibra', 'South C', 'Pangani', 'Dandora', 'Kayole'])
+
+  const handleAddMatrixRow = () => {
+    const trimmed = newRowName.trim()
+    if (!trimmed) {
+      toast.error('Please enter a name for the county or region row')
+      return
+    }
+    if (activeMatrixList.includes(trimmed)) {
+      toast.error(`"${trimmed}" is already in the matrix`)
+      return
+    }
+
+    setCompConfig(prev => {
+      const isNat = prev.scope === 'NATIONAL'
+      const key = isNat ? 'national_rows' : 'county_rows'
+      const existing = prev[key] || activeMatrixList
+      const newRows = [...existing, trimmed]
+      const newLimits = { ...prev.granular_limits }
+      newLimits[trimmed] = { '30': 'Def', '20': 'Def', '15': 'Def', '5': 'Def' }
+      return { ...prev, [key]: newRows, granular_limits: newLimits }
+    })
+
+    toast.success(`Added "${trimmed}" to quota matrix`)
+    setNewRowName('')
+  }
+
+  const handleDeleteMatrixRow = (rowName: string) => {
+    setCompConfig(prev => {
+      const isNat = prev.scope === 'NATIONAL'
+      const key = isNat ? 'national_rows' : 'county_rows'
+      const existing = prev[key] || activeMatrixList
+      const newRows = existing.filter(r => r !== rowName)
+      const newLimits = { ...prev.granular_limits }
+      delete newLimits[rowName]
+      return { ...prev, [key]: newRows, granular_limits: newLimits }
+    })
+    toast.success(`Removed "${rowName}" from quota matrix`)
+  }
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
@@ -471,46 +512,88 @@ export default function SettingsClient({
 
             {/* Granular Matrix Table */}
             <div>
-              <p className="font-bold text-xs text-gray-800 uppercase tracking-wider mb-1">
-                GRANULAR {compConfig.scope === 'NATIONAL' ? 'ZONE' : 'COUNTY'} & CATEGORY LIMITS
-              </p>
-              <p className="text-xs text-gray-500 mb-3">
-                Set specific registration quotas for a given region and category. Leave blank or enter Def to use the global fallback limit (defaults to 10).
-              </p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="font-bold text-xs text-gray-800 uppercase tracking-wider">
+                    GRANULAR {compConfig.scope === 'NATIONAL' ? 'COUNTY' : 'ZONE / REGION'} & CATEGORY LIMITS
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Set specific registration quotas for a given {compConfig.scope === 'NATIONAL' ? 'county' : 'region'} and category. Leave blank or enter Def to use the global fallback limit (defaults to 10).
+                  </p>
+                </div>
 
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                {/* Add Row Controls */}
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                  <input
+                    type="text"
+                    placeholder={compConfig.scope === 'NATIONAL' ? 'e.g. Samburu County, Meru...' : 'e.g. South B, Ruaka...'}
+                    value={newRowName}
+                    onChange={e => setNewRowName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddMatrixRow() } }}
+                    className="input-field !py-1.5 !px-3 text-xs w-full sm:w-56"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddMatrixRow}
+                    className="btn-primary !py-1.5 !px-3 text-xs flex items-center gap-1 shrink-0 font-bold"
+                  >
+                    <Plus size={13} /> Add Row
+                  </button>
+                </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-xl overflow-hidden shadow-xs bg-white">
                 <table className="w-full text-left">
                   <thead className="bg-gray-50/80 border-b border-gray-200 text-xs font-bold text-gray-700">
                     <tr>
-                      <th className="p-3 font-serif uppercase tracking-wider">{compConfig.scope === 'NATIONAL' ? 'REGION / ZONE' : 'COUNTY'}</th>
+                      <th className="p-3 font-serif uppercase tracking-wider">{compConfig.scope === 'NATIONAL' ? 'COUNTY' : 'REGION / ZONE'}</th>
                       <th className="p-3 text-center">30 JUZ'</th>
                       <th className="p-3 text-center">20 JUZ'</th>
                       <th className="p-3 text-center">15 JUZ'</th>
                       <th className="p-3 text-center">5 JUZ'</th>
+                      <th className="p-3 text-right">ACTION</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs">
-                    {activeMatrixList.map(rName => {
-                      const rowLimits = compConfig.granular_limits[rName] || {}
-                      return (
-                        <tr key={rName} className="hover:bg-gray-50/60">
-                          <td className="p-3 font-bold text-gray-900">{rName}</td>
-                          {['30', '20', '15', '5'].map(juz => {
-                            const val = rowLimits[juz] !== undefined ? rowLimits[juz] : 'Def'
-                            return (
-                              <td key={juz} className="p-2 text-center">
-                                <input
-                                  type="text"
-                                  value={val}
-                                  onChange={e => handleGranularLimitChange(rName, juz, e.target.value)}
-                                  className="w-16 mx-auto text-center font-mono text-xs py-1 px-1.5 border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white focus:border-[#006838] outline-none"
-                                />
-                              </td>
-                            )
-                          })}
-                        </tr>
-                      )
-                    })}
+                    {activeMatrixList.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-400">
+                          No rows defined. Use the &quot;Add Row&quot; field above to add {compConfig.scope === 'NATIONAL' ? 'counties' : 'regions'}.
+                        </td>
+                      </tr>
+                    ) : (
+                      activeMatrixList.map(rName => {
+                        const rowLimits = compConfig.granular_limits[rName] || {}
+                        return (
+                          <tr key={rName} className="hover:bg-gray-50/60 transition-colors">
+                            <td className="p-3 font-bold text-gray-900">{rName}</td>
+                            {['30', '20', '15', '5'].map(juz => {
+                              const val = rowLimits[juz] !== undefined ? rowLimits[juz] : 'Def'
+                              return (
+                                <td key={juz} className="p-2 text-center">
+                                  <input
+                                    type="text"
+                                    value={val}
+                                    onChange={e => handleGranularLimitChange(rName, juz, e.target.value)}
+                                    className="w-16 mx-auto text-center font-mono text-xs py-1 px-1.5 border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white focus:border-[#006838] outline-none"
+                                  />
+                                </td>
+                              )
+                            })}
+                            <td className="p-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMatrixRow(rName)}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                title={`Delete ${rName} row`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
