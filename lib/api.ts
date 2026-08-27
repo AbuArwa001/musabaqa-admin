@@ -28,6 +28,14 @@ async function request<T>(
       const body = await res.json()
       detail = body.detail || detail
     } catch {}
+    
+    // Auto redirect to login on token expiration
+    if (res.status === 401 && typeof window !== 'undefined') {
+      fetch('/api/logout', { method: 'POST' }).finally(() => {
+        window.location.href = '/en/login'
+      })
+    }
+    
     throw new ApiError(res.status, detail)
   }
 
