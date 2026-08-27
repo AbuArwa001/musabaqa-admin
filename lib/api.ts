@@ -457,6 +457,7 @@ export function saveCompetitionConfig(config: CompetitionConfig): void {
   if (typeof window === 'undefined') return
   try {
     localStorage.setItem('musabaqa_competition_config', JSON.stringify(config))
+    window.dispatchEvent(new Event('storage'))
   } catch {}
 }
 

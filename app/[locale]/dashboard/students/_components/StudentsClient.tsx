@@ -21,8 +21,8 @@ import {
 
 import {
   approveStudent, rejectStudent, reassignStudentCategory, updateStudent,
-  bulkSoftDeleteStudents, getReportUrl, getExportAnalyticsUrl,
-  type StudentRead, type InstitutionRead, type Category, type Region
+  bulkSoftDeleteStudents, getReportUrl, getExportAnalyticsUrl, getCompetitionConfig,
+  type StudentRead, type InstitutionRead, type Category, type Region, type CompetitionConfig
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 import Modal from '@/components/Modal'
@@ -52,6 +52,22 @@ export default function StudentsClient({
   const [globalFilter, setGlobalFilter] = useState('')
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+
+  // Competition Config Scope State
+  const [compConfig, setCompConfig] = useState<CompetitionConfig>(() => getCompetitionConfig())
+
+  useEffect(() => {
+    const updateConfig = () => setCompConfig(getCompetitionConfig())
+    updateConfig()
+    window.addEventListener('storage', updateConfig)
+    window.addEventListener('focus', updateConfig)
+    return () => {
+      window.removeEventListener('storage', updateConfig)
+      window.removeEventListener('focus', updateConfig)
+    }
+  }, [])
+
+  const isNational = compConfig.scope === 'NATIONAL'
 
   // Filter States
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED'>('ALL')
@@ -160,21 +176,53 @@ export default function StudentsClient({
   const approvedStudents = data.filter(s => s.review_status === 'APPROVED').length
   const rejectedStudents = data.filter(s => s.review_status === 'REJECTED').length
 
-  // Distinct locations from data & regions for dropdown filtering
+  const KENYA_COUNTIES = [
+    'Nairobi', 'Mombasa', 'Nakuru', 'Garissa', 'Isiolo', 'Mandera', 'Wajir',
+    'Kisumu', 'Kilifi', 'Kwale', 'Lamu', 'Kajiado', 'Machakos', 'Kiambu',
+    'Uasin Gishu', 'Meru', 'Marsabit', 'Tana River', 'Turkana', 'Samburu',
+    'Kakamega', 'Baringo', 'Bomet', 'Bungoma', 'Busia', 'Elgeyo Marakwet',
+    'Embu', 'Homa Bay', 'Kericho', 'Kirinyaga', 'Kisii', 'Kitui', 'Makueni',
+    'Migori', "Murang'a", 'Nandi', 'Narok', 'Nyamira', 'Nyandarua', 'Nyeri',
+    'Siaya', 'Taita Taveta', 'Tharaka Nithi', 'Trans Nzoia', 'Vihiga', 'West Pokot'
+  ]
+
+  // Distinct locations: If NATIONAL scope -> Kenya Counties; If COUNTY_REGIONAL scope -> Regional Zones
   const distinctLocations = useMemo(() => {
     const locSet = new Set<string>()
-    regions.forEach(r => {
-      if (r.name_en) locSet.add(r.name_en)
-    })
-    data.forEach(s => {
-      if (s.residence) locSet.add(s.residence)
-      const c = (s as any).county
-      if (c) locSet.add(c)
-    })
-    return Array.from(locSet).filter(Boolean).sort()
-  }, [regions, data])
 
-  // Filtered dataset according to Status, Category, Location, Institution, and Search Query
+    if (isNational) {
+      // 1. Configured national rows (counties)
+      ;(compConfig.national_rows || []).forEach(r => {
+        const clean = r.replace(/\s+County$/i, '').trim()
+        if (clean) locSet.add(clean)
+      })
+      // 2. Standard 47 Kenya counties
+      KENYA_COUNTIES.forEach(c => locSet.add(c))
+      // 3. Any county/residence found in student dataset
+      data.forEach(s => {
+        if (s.residence) locSet.add(s.residence.replace(/\s+County$/i, '').trim())
+        const c = (s as any).county
+        if (c) locSet.add(String(c).replace(/\s+County$/i, '').trim())
+      })
+    } else {
+      // County-level competition: internal regional zones
+      regions.forEach(r => {
+        if (r.name_en) locSet.add(r.name_en)
+      })
+      ;(compConfig.county_rows || []).forEach(r => {
+        if (r) locSet.add(r)
+      })
+      data.forEach(s => {
+        if (s.residence) locSet.add(s.residence)
+        const c = (s as any).county
+        if (c) locSet.add(c)
+      })
+    }
+
+    return Array.from(locSet).filter(Boolean).sort((a, b) => a.localeCompare(b))
+  }, [isNational, compConfig, regions, data])
+
+  // Filtered dataset according to Status, Category, Location (County or Zone), Institution, and Search Query
   const filteredData = useMemo(() => {
     return data.filter(student => {
       // 1. Status Filter
@@ -189,23 +237,35 @@ export default function StudentsClient({
       if (institutionFilter !== 'ALL' && String(student.institution_id) !== String(institutionFilter)) {
         return false
       }
-      // 4. Location Filter (region / residence / county)
+      // 4. Location Filter (County when national, Regional Zone when county-level)
       if (locationFilter !== 'ALL') {
+        const target = locationFilter.toLowerCase().replace(/\s+county$/i, '').trim()
+        const residence = (student.residence || '').toLowerCase().replace(/\s+county$/i, '').trim()
+        const county = ((student as any).county || '').toLowerCase().replace(/\s+county$/i, '').trim()
         const inst = instMap[student.institution_id]
         const reg = inst?.region_id ? regMap[inst.region_id] : null
-        const regEn = reg?.name_en?.toLowerCase() || ''
-        const regAr = reg?.name_ar?.toLowerCase() || ''
-        const residence = (student.residence || '').toLowerCase()
-        const county = ((student as any).county || '').toLowerCase()
-        const targetLoc = locationFilter.toLowerCase()
+        const regEn = (reg?.name_en || '').toLowerCase()
+        const regAr = (reg?.name_ar || '').toLowerCase()
 
-        const match =
-          regEn.includes(targetLoc) ||
-          regAr.includes(targetLoc) ||
-          residence.includes(targetLoc) ||
-          county.includes(targetLoc)
+        if (isNational) {
+          const match =
+            residence.includes(target) ||
+            county.includes(target) ||
+            (residence.length > 2 && target.includes(residence)) ||
+            (county.length > 2 && target.includes(county)) ||
+            regEn.includes(target) ||
+            regAr.includes(target)
 
-        if (!match) return false
+          if (!match) return false
+        } else {
+          const match =
+            regEn.includes(target) ||
+            regAr.includes(target) ||
+            residence.includes(target) ||
+            county.includes(target)
+
+          if (!match) return false
+        }
       }
       // 5. Global Search Text
       if (globalFilter.trim()) {
@@ -220,6 +280,7 @@ export default function StudentsClient({
         const nationalId = (student.national_id || '').toLowerCase()
         const refId = `ref-000${student.id}`.toLowerCase()
         const residence = (student.residence || '').toLowerCase()
+        const county = ((student as any).county || '').toLowerCase()
 
         const match =
           name.includes(q) ||
@@ -230,13 +291,14 @@ export default function StudentsClient({
           refId.includes(q) ||
           instName.includes(q) ||
           catName.includes(q) ||
-          residence.includes(q)
+          residence.includes(q) ||
+          county.includes(q)
 
         if (!match) return false
       }
       return true
     })
-  }, [data, statusFilter, categoryFilter, institutionFilter, locationFilter, globalFilter, instMap, catMap, regMap])
+  }, [data, statusFilter, categoryFilter, institutionFilter, locationFilter, globalFilter, instMap, catMap, regMap, isNational])
 
   const hasActiveFilters =
     statusFilter !== 'ALL' ||
@@ -469,7 +531,7 @@ export default function StudentsClient({
     }),
     columnHelper.accessor('institution_id', {
       id: 'institution_id',
-      header: 'Location & Institution',
+      header: isNational ? 'County & Institution' : 'Location & Institution',
       enableSorting: true,
       sortingFn: (rowA, rowB) => {
         const instA = instMap[rowA.original.institution_id]?.name || ''
@@ -480,14 +542,18 @@ export default function StudentsClient({
         const s = row.original
         const inst = instMap[s.institution_id]
         const reg = inst && inst.region_id ? regMap[inst.region_id] : null
+        const locationDisplay = isNational
+          ? (s.residence || (s as any).county || (reg ? (isAr ? reg.name_ar : reg.name_en) : 'Nairobi'))
+          : (reg ? (isAr ? reg.name_ar : reg.name_en) : s.residence || 'Nairobi')
+
         return (
           <div>
             <p className="font-bold text-xs text-gray-900 truncate max-w-[200px]">
               {inst?.name || `Institution #${s.institution_id}`}
             </p>
             <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-              <MapPin size={11} className="text-rose-500" />
-              <span>{reg ? (isAr ? reg.name_ar : reg.name_en) : s.residence || 'Nairobi'}</span>
+              <MapPin size={11} className="text-rose-500 shrink-0" />
+              <span className="font-medium text-gray-700">{locationDisplay}</span>
               <span className="text-[10px] text-gray-400">({s.nationality ? s.nationality.toLowerCase() : 'kenyan'})</span>
             </div>
           </div>
@@ -777,16 +843,20 @@ export default function StudentsClient({
               ))}
             </select>
 
-            {/* Location / Region Filter */}
+            {/* Location / County Filter */}
             <select
               value={locationFilter}
               onChange={e => setLocationFilter(e.target.value)}
-              className="input-field !py-2 text-xs !w-auto min-w-[135px] font-medium bg-white cursor-pointer"
+              className="input-field !py-2 text-xs !w-auto min-w-[140px] font-medium bg-white cursor-pointer"
             >
-              <option value="ALL">Location: All</option>
+              <option value="ALL">
+                {isNational
+                  ? (isAr ? 'المحافظة: الكل' : 'County: All')
+                  : (isAr ? 'المنطقة: الكل' : 'Location: All')}
+              </option>
               {distinctLocations.map(loc => (
                 <option key={loc} value={loc}>
-                  📍 {loc}
+                  {isNational ? `🇰🇪 ${loc}` : `📍 ${loc}`}
                 </option>
               ))}
             </select>
@@ -865,7 +935,7 @@ export default function StudentsClient({
             )}
             {locationFilter !== 'ALL' && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200 text-xs font-medium">
-                Location: {locationFilter}
+                {isNational ? (isAr ? 'المحافظة' : 'County') : (isAr ? 'المنطقة' : 'Location')}: {locationFilter}
                 <button onClick={() => setLocationFilter('ALL')} className="hover:text-sky-950 font-bold ml-0.5 cursor-pointer">✕</button>
               </span>
             )}
