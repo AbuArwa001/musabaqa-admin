@@ -61,11 +61,15 @@ export default function ScoringClient({
           if (!isModerator || data.student_id) {
             setActiveStudentId(data.student_id)
           }
+        } else if (data.type === 'SCORE_UPDATED' && data.round_id === round.id) {
+          if (isModerator && activeStudentId === data.student_id) {
+            getMyScore(token, round.id, activeStudentId).then(setMyScore).catch(() => {})
+          }
         }
       } catch (e) {}
     }
     return () => ws.close()
-  }, [token, round.id, isModerator])
+  }, [token, round.id, isModerator, activeStudentId])
 
   const handleSetLive = async () => {
     if (!activeStudentId || !isModerator) return
