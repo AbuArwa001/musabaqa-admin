@@ -125,7 +125,7 @@ export default function ArchiveClient({
   }
 
   const colHelper = createColumnHelper<StudentRead>()
-  const columns = [
+  const columns = useMemo(() => [
     colHelper.display({
       id: 'select',
       header: ({ table }) => (
@@ -273,7 +273,7 @@ export default function ArchiveClient({
         )
       }
     })
-  ]
+  ], [locale, isAr, catMap, instMap, regMap])
 
   const table = useReactTable({
     data: filteredData,
