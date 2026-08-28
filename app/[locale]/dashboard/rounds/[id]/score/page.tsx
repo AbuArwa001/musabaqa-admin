@@ -30,12 +30,14 @@ export default async function ScorePage({
     // Only fetch students for this specific round's category
     const students = await listStudents(token, { category_id: round.category_id.toString() })
     const results = await getRoundResults(token, roundId)
+    const { deduction_types } = await import('@/lib/api').then(m => m.getRoundDeductionTypes(token, roundId))
     
     return (
       <ScoringClient 
         round={round}
         students={students}
         results={results}
+        deductionTypes={deduction_types}
         dict={dict}
         locale={locale}
         token={token}

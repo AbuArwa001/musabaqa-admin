@@ -328,6 +328,18 @@ export async function getMyScore(token: string, roundId: number, studentId: numb
   return request(`/api/v1/scoring/rounds/${roundId}/students/${studentId}/my-score`, {}, token)
 }
 
+export type DeductionTypeOut = {
+  id: number
+  name_en: string
+  name_ar: string
+  points_deducted: number | null
+  criteria_name: string
+}
+
+export async function getRoundDeductionTypes(token: string, roundId: number): Promise<{ deduction_types: DeductionTypeOut[] }> {
+  return request(`/api/v1/scoring/rounds/${roundId}/deduction-types`, {}, token)
+}
+
 // ─── Results ──────────────────────────────────────────────────────────────────
 
 export interface RoundResult {
