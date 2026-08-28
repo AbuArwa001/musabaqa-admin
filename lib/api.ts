@@ -259,7 +259,8 @@ export async function updateArchivalReason(token: string, id: number, deletion_r
 
 export interface RoundRead {
   id: number; category_id: number; round_type: 'PRELIMINARY' | 'FINAL';
-  status: 'PENDING' | 'ACTIVE' | 'COMPLETED'; scheduled_at: string
+  status: 'PENDING' | 'ACTIVE' | 'COMPLETED'; scheduled_at: string;
+  active_student_id: number | null
 }
 
 export interface JudgeAssignment {
@@ -294,6 +295,10 @@ export async function startRound(token: string, roundId: number): Promise<RoundR
 
 export async function completeRound(token: string, roundId: number): Promise<RoundRead> {
   return request(`/api/v1/rounds/${roundId}/complete`, { method: 'POST' }, token)
+}
+
+export async function setActiveStudent(token: string, roundId: number, studentId: number): Promise<RoundRead> {
+  return request(`/api/v1/rounds/${roundId}/active-student/${studentId}`, { method: 'POST' }, token)
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
