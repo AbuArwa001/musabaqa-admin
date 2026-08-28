@@ -300,7 +300,7 @@ export default function LoginClient({ dict, locale }: { dict: Dict; locale: stri
                   {...register('email')}
                   type="email"
                   placeholder="admin@jmc.or.ke"
-                  className="w-full pl-10 pr-4 h-11 bg-stone-950/70 border border-stone-800 text-stone-100 placeholder:text-stone-600 focus:border-[#c99335] focus:ring-1 focus:ring-[#c99335] rounded-xl text-sm transition-all outline-none"
+                  className="w-full pl-10 pr-4 h-11 bg-stone-950/70 border border-stone-800 text-white font-medium placeholder:text-stone-500 focus:border-[#c99335] focus:ring-1 focus:ring-[#c99335] rounded-xl text-sm transition-all outline-none"
                   dir="ltr"
                   autoComplete="username"
                   autoFocus
@@ -322,7 +322,7 @@ export default function LoginClient({ dict, locale }: { dict: Dict; locale: stri
                   {...register('password')}
                   type={showPw ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 h-11 bg-stone-950/70 border border-stone-800 text-stone-100 placeholder:text-stone-600 focus:border-[#c99335] focus:ring-1 focus:ring-[#c99335] rounded-xl text-sm transition-all outline-none font-mono"
+                  className="w-full pl-10 pr-10 h-11 bg-stone-950/70 border border-stone-800 text-white font-medium placeholder:text-stone-500 focus:border-[#c99335] focus:ring-1 focus:ring-[#c99335] rounded-xl text-sm transition-all outline-none font-mono"
                   dir="ltr"
                   autoComplete="current-password"
                 />
