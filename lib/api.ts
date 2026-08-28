@@ -83,6 +83,10 @@ export interface InstitutionRead {
   status: 'PENDING' | 'APPROVED' | 'REJECTED'; rejection_reason: string | null;
   preferred_language: 'EN' | 'AR'; created_at: string; is_active: boolean;
   document_url?: string | null;
+  teacher_photo_url?: string | null;
+  classroom_photo_url?: string | null;
+  students_photo_url?: string | null;
+  video_url?: string | null;
   registration_document?: string | null;
   title_deed_document?: string | null;
   recommendation_letter?: string | null;

@@ -285,31 +285,143 @@ export default function InstitutionDetailClient({
               </p>
             </div>
 
-            {/* Uploaded Registration / Accreditation Document */}
+            {/* 1. Uploaded Registration / Accreditation Document */}
             {inst.document_url ? (
-              <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
+              <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-sm">
-                    <FileText size={18} />
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
+                    📄
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-xs text-gray-900 truncate">Uploaded Accreditation Document</p>
-                    <p className="text-[10px] text-emerald-700 font-medium">Saved in AWS: institutions/{inst.name.replace(/\s+/g, '_')}/...</p>
+                    <p className="font-bold text-xs text-gray-900 truncate">Registration Certificate</p>
+                    <p className="text-[10px] text-emerald-700 font-medium truncate">institutions/{inst.name.replace(/\s+/g, '_')}/doc...</p>
                   </div>
                 </div>
                 <a
                   href={inst.document_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-primary !py-1.5 !px-3 text-xs flex items-center gap-1.5 shadow-sm"
+                  className="btn-primary !py-1 !px-2.5 text-xs flex items-center gap-1 shadow-sm"
                 >
-                  <ExternalLink size={12} /> View Document
+                  <ExternalLink size={11} /> View
                 </a>
               </div>
             ) : (
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center">
-                <p className="text-xs font-semibold text-gray-500">No verification document attached during registration</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">The institution registered without an attached document.</p>
+              <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between text-xs text-gray-400">
+                <span>📄 Registration Certificate</span>
+                <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">Not Uploaded</span>
+              </div>
+            )}
+
+            {/* 2. Head Ustadh / Teacher Photo */}
+            {inst.teacher_photo_url ? (
+              <div className="p-3 bg-sky-50/80 border border-sky-200 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
+                    👨‍🏫
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-gray-900 truncate">Head Ustadh Photo</p>
+                    <p className="text-[10px] text-sky-700 font-medium">Lead Teacher / Imam</p>
+                  </div>
+                </div>
+                <a
+                  href={inst.teacher_photo_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary !py-1 !px-2.5 text-xs flex items-center gap-1 text-sky-800"
+                >
+                  <ExternalLink size={11} /> View Photo
+                </a>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between text-xs text-gray-400">
+                <span>👨‍🏫 Head Ustadh Photo</span>
+                <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">Not Uploaded</span>
+              </div>
+            )}
+
+            {/* 3. Madrasa Classroom / Premises Photo */}
+            {inst.classroom_photo_url ? (
+              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
+                    🏫
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-gray-900 truncate">Classroom Premises</p>
+                    <p className="text-[10px] text-amber-700 font-medium">Halaqa / Building</p>
+                  </div>
+                </div>
+                <a
+                  href={inst.classroom_photo_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary !py-1 !px-2.5 text-xs flex items-center gap-1 text-amber-800"
+                >
+                  <ExternalLink size={11} /> View Photo
+                </a>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between text-xs text-gray-400">
+                <span>🏫 Classroom Premises</span>
+                <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">Not Uploaded</span>
+              </div>
+            )}
+
+            {/* 4. Students in Session Photo */}
+            {inst.students_photo_url ? (
+              <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
+                    👥
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-gray-900 truncate">Students in Session</p>
+                    <p className="text-[10px] text-emerald-700 font-medium">Assembly / Class</p>
+                  </div>
+                </div>
+                <a
+                  href={inst.students_photo_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary !py-1 !px-2.5 text-xs flex items-center gap-1 text-emerald-800"
+                >
+                  <ExternalLink size={11} /> View Photo
+                </a>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between text-xs text-gray-400">
+                <span>👥 Students in Session</span>
+                <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">Not Uploaded</span>
+              </div>
+            )}
+
+            {/* 5. Madrasa / Recitation Video */}
+            {inst.video_url ? (
+              <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-800 flex items-center justify-center shrink-0 shadow-sm font-bold text-xs">
+                    🎥
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-gray-900 truncate">Introduction Video</p>
+                    <p className="text-[10px] text-rose-700 font-medium">Tour / Recitation (.mp4)</p>
+                  </div>
+                </div>
+                <a
+                  href={inst.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary !py-1 !px-2.5 text-xs flex items-center gap-1 !bg-rose-700 hover:!bg-rose-800 shadow-sm"
+                >
+                  <ExternalLink size={11} /> Play Video
+                </a>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between text-xs text-gray-400">
+                <span>🎥 Introduction Video</span>
+                <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">Not Uploaded</span>
               </div>
             )}
           </div>
