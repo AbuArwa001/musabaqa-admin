@@ -5,21 +5,16 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import {
   submitDeduction, getMyScore, getAdminWsUrl, setActiveStudent,
-  type RoundRead, type StudentRead, type RoundResult, type JudgeScoreSummary
+  type RoundRead, type StudentRead, type RoundResult, type JudgeScoreSummary, type DeductionTypeOut
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 import { ArrowLeft, AlertCircle, RefreshCcw, CheckCircle, PlayCircle } from 'lucide-react'
 
-const DEDUCTION_TYPES = [
-  { id: 1, name_en: 'Memorization Error', name_ar: 'خطأ في الحفظ', default_amount: 0.5 },
-  { id: 2, name_en: 'Tajweed Minor', name_ar: 'خطأ تجويد خفي', default_amount: 0.25 },
-  { id: 3, name_en: 'Tajweed Major', name_ar: 'خطأ تجويد جلي', default_amount: 1.0 },
-]
 
 export default function ScoringClient({ 
-  round, students, results, dict, locale, token, currentUserId, role
+  round, students, results, deductionTypes, dict, locale, token, currentUserId, role
 }: { 
-  round: RoundRead, students: StudentRead[], results: RoundResult[], dict: Dict, locale: string, token: string, currentUserId: number, role: string
+  round: RoundRead, students: StudentRead[], results: RoundResult[], deductionTypes: DeductionTypeOut[], dict: Dict, locale: string, token: string, currentUserId: number, role: string
 }) {
   const t = dict.rounds
   const tc = dict.common
@@ -100,7 +95,7 @@ export default function ScoringClient({
     }
   }
 
-  const totalDeducted = DEDUCTION_TYPES.reduce((acc, dt) => acc + (deductions[dt.id] || 0) * dt.default_amount, 0)
+  const totalDeducted = deductionTypes.reduce((acc, dt) => acc + (deductions[dt.id] || 0) * (dt.points_deducted || 0), 0)
   const runningScore = myScore ? myScore.total_score : (100 - totalDeducted)
 
   return (
@@ -218,16 +213,17 @@ export default function ScoringClient({
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-auto">
-                {DEDUCTION_TYPES.map(dt => (
+                {deductionTypes.map(dt => (
                   <button
                     key={dt.id}
                     disabled={round.status !== 'ACTIVE' || isSubmitting || (!isModerator && !isViewingLive) || isModerator}
-                    onClick={() => handleDeduction(dt.id, dt.default_amount)}
+                    onClick={() => handleDeduction(dt.id, (dt.points_deducted || 0))}
                     className="p-5 rounded-xl bg-gray-50 border border-gray-200 hover:border-amber-400 hover:bg-amber-50/50 transition-all text-left flex justify-between items-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98]"
                   >
                     <div>
                       <p className="font-bold text-gray-900 text-sm font-serif">{isAr ? dt.name_ar : dt.name_en}</p>
-                      <p className="text-rose-600 text-xs font-semibold mt-1">-{dt.default_amount} points</p>
+                      <p className="text-[10px] text-gray-500 font-sans uppercase tracking-wider mt-0.5">{dt.criteria_name}</p>
+                      <p className="text-rose-600 text-xs font-semibold mt-1">-{(dt.points_deducted || 0)} points</p>
                     </div>
                     {deductions[dt.id] > 0 && (
                       <span className="w-7 h-7 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xs">
