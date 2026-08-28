@@ -285,62 +285,33 @@ export default function InstitutionDetailClient({
               </p>
             </div>
 
-            {/* Document Item 1: Registration Certificate */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                  <ShieldCheck size={18} />
+            {/* Uploaded Registration / Accreditation Document */}
+            {inst.document_url ? (
+              <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 shadow-sm">
+                    <FileText size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-xs text-gray-900 truncate">Uploaded Accreditation Document</p>
+                    <p className="text-[10px] text-emerald-700 font-medium">Saved in AWS: institutions/{inst.name.replace(/\s+/g, '_')}/...</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-xs text-gray-900 truncate">Registration Certificate</p>
-                  <p className="text-[10px] text-gray-500">Registrar / SUPKEM / CIPK</p>
-                </div>
+                <a
+                  href={inst.document_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary !py-1.5 !px-3 text-xs flex items-center gap-1.5 shadow-sm"
+                >
+                  <ExternalLink size={12} /> View Document
+                </a>
               </div>
-              <button
-                onClick={() => toast.info('Viewing Registration Certificate attachment...')}
-                className="btn-secondary !py-1 !px-2.5 text-xs text-emerald-800 flex items-center gap-1"
-              >
-                <ExternalLink size={11} /> View
-              </button>
-            </div>
-
-            {/* Document Item 2: Title Deed / Premises Recognition Proof */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
-                  <Award size={18} />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-xs text-gray-900 truncate">Title Deed / Premises Proof</p>
-                  <p className="text-[10px] text-gray-500">Waqf Deed / Mosque Land Proof</p>
-                </div>
+            ) : (
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center">
+                <p className="text-xs font-semibold text-gray-500">No verification document attached during registration</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">The institution registered without an attached document.</p>
               </div>
-              <button
-                onClick={() => toast.info('Viewing Waqf Deed / Premises Proof attachment...')}
-                className="btn-secondary !py-1 !px-2.5 text-xs text-amber-800 flex items-center gap-1"
-              >
-                <ExternalLink size={11} /> View
-              </button>
-            </div>
-
-            {/* Document Item 3: Imam / Head Ustadh Recommendation */}
-            <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-700 flex items-center justify-center shrink-0">
-                  <FileCheck2 size={18} />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-xs text-gray-900 truncate">Head Ustadh Endorsement</p>
-                  <p className="text-[10px] text-gray-500">Official Stamped Letter</p>
-                </div>
-              </div>
-              <button
-                onClick={() => toast.info('Viewing Endorsement Letter attachment...')}
-                className="btn-secondary !py-1 !px-2.5 text-xs text-sky-800 flex items-center gap-1"
-              >
-                <ExternalLink size={11} /> View
-              </button>
-            </div>
+            )}
           </div>
 
           {/* Review Decision Card */}

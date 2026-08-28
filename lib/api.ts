@@ -82,6 +82,7 @@ export interface InstitutionRead {
   phone: string; email: string; region_id: number | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED'; rejection_reason: string | null;
   preferred_language: 'EN' | 'AR'; created_at: string; is_active: boolean;
+  document_url?: string | null;
   registration_document?: string | null;
   title_deed_document?: string | null;
   recommendation_letter?: string | null;
