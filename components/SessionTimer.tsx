@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { Clock, ShieldAlert, AlertTriangle, RefreshCw, LogOut, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
@@ -146,7 +147,7 @@ export default function SessionTimer({ tokenExp: initialTokenExp, locale }: Sess
       </div>
 
       {/* ─── 2. Ultra-Premium Session Expiry Warning Modal (< 1 minute) ─── */}
-      {showWarningModal && (
+      {showWarningModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="relative w-full max-w-md bg-[#121820] border-2 border-amber-500/40 rounded-3xl p-7 text-white shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9)] overflow-hidden animate-in zoom-in-95 duration-200">
             
@@ -227,7 +228,8 @@ export default function SessionTimer({ tokenExp: initialTokenExp, locale }: Sess
 
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   )
 }
+

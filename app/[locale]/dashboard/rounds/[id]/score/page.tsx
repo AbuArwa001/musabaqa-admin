@@ -28,7 +28,8 @@ export default async function ScorePage({
   try {
     const round = await getRound(token, roundId)
     // Only fetch students for this specific round's category
-    const students = await listStudents(token, { category_id: round.category_id.toString() })
+    const allStudents = await listStudents(token, { category_id: round.category_id.toString() })
+    const students = allStudents.filter(s => s.review_status === 'APPROVED')
     const results = await getRoundResults(token, roundId)
     const { deduction_types } = await import('@/lib/api').then(m => m.getRoundDeductionTypes(token, roundId))
     

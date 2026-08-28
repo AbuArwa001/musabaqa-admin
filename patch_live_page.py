@@ -1,20 +1,16 @@
-import { cookies } from 'next/headers'
-import { notFound } from 'next/navigation'
-import { isValidLocale, getDictionary } from '@/lib/dictionaries'
-import { listStudents, listRounds } from '@/lib/api'
-import LiveClient from './LiveClient'
+import re
 
-export const dynamic = 'force-dynamic'
+with open("app/[locale]/dashboard/live/page.tsx", "r") as f:
+    content = f.read()
 
-export default async function LivePage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-  if (!isValidLocale(locale)) notFound()
+old_logic = """  const [students, rounds] = await Promise.all([
+    listStudents(token).catch(() => []),
+    listRounds(token).catch(() => []),
+  ])
 
-  const store = await cookies()
-  const token = store.get('musabaqa_admin_token')!.value
-  const dict = await getDictionary(locale)
+  return <LiveClient students={students} rounds={rounds} dict={dict} locale={locale} token={token} />"""
 
-  const { getRoundResults } = await import('@/lib/api')
+new_logic = """  const { getRoundResults } = await import('@/lib/api')
   const [students, rounds] = await Promise.all([
     listStudents(token).catch(() => []),
     listRounds(token).catch(() => []),
@@ -33,5 +29,9 @@ export default async function LivePage({ params }: { params: Promise<{ locale: s
   // Sort descending by timestamp
   initialEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-  return <LiveClient students={students} rounds={rounds} initialEvents={initialEvents} dict={dict} locale={locale} token={token} />
-}
+  return <LiveClient students={students} rounds={rounds} initialEvents={initialEvents} dict={dict} locale={locale} token={token} />"""
+
+content = content.replace(old_logic, new_logic)
+
+with open("app/[locale]/dashboard/live/page.tsx", "w") as f:
+    f.write(content)

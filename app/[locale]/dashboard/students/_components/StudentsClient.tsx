@@ -623,7 +623,7 @@ export default function StudentsClient({
             >
               <Tag size={12} /> Category
             </button>
-            {s.review_status !== 'APPROVED' && (
+            {s.review_status === 'PENDING_REVIEW' && (
               <button
                 onClick={() => handleApprove(s.id)}
                 disabled={isApproving}

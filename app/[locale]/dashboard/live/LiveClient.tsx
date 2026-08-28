@@ -24,18 +24,19 @@ function getEventStyle(type: string) {
   return eventColors[type] ?? { color: 'text-sky-700', bg: 'bg-sky-50', border: 'border-sky-200' }
 }
 
-export default function LiveClient({ students, rounds, dict, locale, token }: {
+export default function LiveClient({ students, rounds, initialEvents = [], dict, locale, token }: {
   students: StudentRead[]
   rounds: RoundRead[]
   dict: Dict
   locale: string
   token: string
+  initialEvents?: LiveEvent[]
 }) {
   const t = dict.live
   const isAr = locale === 'ar'
-  const [events, setEvents] = useState<LiveEvent[]>([])
+  const [events, setEvents] = useState<LiveEvent[]>(initialEvents)
   const [wsConnected, setWsConnected] = useState(false)
-  const [eventCount, setEventCount] = useState(0)
+  const [eventCount, setEventCount] = useState(initialEvents.length)
 
   const studentMap = useMemo(() => Object.fromEntries(students.map(s => [s.id, s.full_name])), [students])
 
@@ -48,9 +49,33 @@ export default function LiveClient({ students, rounds, dict, locale, token }: {
       ws.onopen = () => setWsConnected(true)
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data)
-          setEvents(prev => [data, ...prev].slice(0, 100))
-          setEventCount(c => c + 1)
+          const raw = JSON.parse(event.data)
+          let parsedEvent: LiveEvent | null = null
+
+          if (raw.type === 'SCORE_UPDATED') {
+            parsedEvent = {
+              type: 'SCORE_UPDATE',
+              timestamp: new Date().toISOString(),
+              payload: { round_id: raw.round_id, student_id: raw.student_id }
+            }
+          } else if (raw.type === 'ACTIVE_STUDENT_CHANGED') {
+            parsedEvent = {
+              type: 'ROUND_START',
+              timestamp: new Date().toISOString(),
+              payload: { round_id: raw.round_id, student_id: raw.student_id }
+            }
+          } else if (raw.entries) {
+            parsedEvent = {
+              type: 'ROUND_END',
+              timestamp: raw.broadcast_at || new Date().toISOString(),
+              payload: { round_id: raw.round_id, final_score: raw.entries[0]?.final_score }
+            }
+          }
+          
+          if (parsedEvent) {
+            setEvents(prev => [parsedEvent, ...prev].slice(0, 100))
+            setEventCount(c => c + 1)
+          }
         } catch (e) {}
       }
       ws.onclose = () => {

@@ -28,10 +28,11 @@ const assignSchema = z.object({
   judge_role: z.enum(['REGULAR', 'GUEST_NEUTRAL'])
 })
 
-export default function RoundsClient({ initialData, categories, judges, dict, locale, token }: { initialData: RoundRead[], categories: Category[], judges: AdminUserRead[], dict: Dict, locale: string, token: string }) {
+export default function RoundsClient({ initialData, categories, judges, dict, locale, token, role }: { initialData: RoundRead[], categories: Category[], judges: AdminUserRead[], dict: Dict, locale: string, token: string, role: string }) {
   const t = dict.rounds
   const tc = dict.common
   const isAr = locale === 'ar'
+  const isModerator = role === 'SUPERADMIN' || role === 'MODERATOR'
 
   const [data, setData] = useState(initialData)
   const [showCreate, setShowCreate] = useState(false)
@@ -100,9 +101,11 @@ export default function RoundsClient({ initialData, categories, judges, dict, lo
         title={t.title}
         subtitle="Manage preliminary and final competition rounds and jury assignments"
         actions={
-          <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
-            <Gavel size={16} /> {t.create}
-          </button>
+          isModerator ? (
+            <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2">
+              <Gavel size={16} /> {t.create}
+            </button>
+          ) : undefined
         }
       />
 
@@ -164,7 +167,7 @@ export default function RoundsClient({ initialData, categories, judges, dict, lo
                     </td>
                     <td className="table-td text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {round.status === 'PENDING' && (
+                        {round.status === 'PENDING' && isModerator && (
                           <>
                             <button onClick={() => setAssigningRoundId(round.id)} className="btn-secondary !py-1 !px-2.5 text-xs">{t.assign_judge}</button>
                             <button onClick={() => handleStart(round.id)} disabled={!isPanelValid} className="btn-primary !py-1 !px-2.5 text-xs flex items-center gap-1">
@@ -172,12 +175,17 @@ export default function RoundsClient({ initialData, categories, judges, dict, lo
                             </button>
                           </>
                         )}
+                        {round.status === 'PENDING' && !isModerator && (
+                          <span className="text-gray-400 text-xs font-medium">Pending assignment</span>
+                        )}
                         {round.status === 'ACTIVE' && (
                           <>
                             <Link href={`/${locale}/dashboard/rounds/${round.id}/score`} className="btn-gold !py-1 !px-2.5 text-xs">{t.score}</Link>
-                            <button onClick={() => handleComplete(round.id)} className="btn-secondary !py-1 !px-2.5 text-xs text-emerald-700 hover:bg-emerald-50 flex items-center gap-1">
-                              <CheckCircle size={11} /> {t.complete}
-                            </button>
+                            {isModerator && (
+                              <button onClick={() => handleComplete(round.id)} className="btn-secondary !py-1 !px-2.5 text-xs text-emerald-700 hover:bg-emerald-50 flex items-center gap-1">
+                                <CheckCircle size={11} /> {t.complete}
+                              </button>
+                            )}
                           </>
                         )}
                         {round.status === 'COMPLETED' && (
