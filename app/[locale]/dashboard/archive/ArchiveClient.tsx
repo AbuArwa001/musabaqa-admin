@@ -192,6 +192,15 @@ export default function ArchiveClient({
         )
       }
     }),
+    colHelper.accessor('archived_at', {
+      header: 'ARCHIVED ON',
+      cell: ({ getValue, row }) => {
+        const val = getValue() as string
+        // Fallback to created_at if archived_at is somehow missing
+        const dateStr = val || row.original.created_at
+        return <span className="text-xs text-gray-500 font-mono whitespace-nowrap">{dateStr ? formatDate(dateStr) : '—'}</span>
+      }
+    }),
     colHelper.accessor(r => r.deletion_reason || r.rejection_reason || '—', {
       id: 'reason',
       header: 'ARCHIVAL REASON',
