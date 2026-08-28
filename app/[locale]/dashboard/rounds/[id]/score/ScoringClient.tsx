@@ -57,7 +57,7 @@ export default function ScoringClient({
             setActiveStudentId(data.student_id)
           }
         } else if (data.type === 'SCORE_UPDATED' && data.round_id === round.id) {
-          if (isModerator && activeStudentId === data.student_id) {
+          if (isModerator && activeStudentId !== null && activeStudentId === data.student_id) {
             getMyScore(token, round.id, activeStudentId).then(setMyScore).catch(() => {})
           }
         }
