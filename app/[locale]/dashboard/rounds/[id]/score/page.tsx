@@ -26,19 +26,38 @@ export default async function ScorePage({
   const roundId = parseInt(id)
 
   try {
-    const round = await getRound(token, roundId)
-    // Only fetch students for this specific round's category
-    const allStudents = await listStudents(token, { category_id: round.category_id.toString() })
-    const students = allStudents.filter(s => s.review_status === 'APPROVED')
-    const results = await getRoundResults(token, roundId)
-    const { deduction_types } = await import('@/lib/api').then(m => m.getRoundDeductionTypes(token, roundId))
-    
+    const [round, allStudents, results, deductionRes, categories, institutions] = await Promise.all([
+      getRound(token, roundId),
+      listStudents(token),
+      getRoundResults(token, roundId),
+      import('@/lib/api').then(m => m.getRoundDeductionTypes(token, roundId)),
+      import('@/lib/api').then(m => m.listCategories().catch(() => [])),
+      import('@/lib/api').then(m => m.listInstitutions(token).catch(() => [])),
+    ])
+
+    const cat = categories.find(c => c.id === round.category_id)
+    if (cat) {
+      round.category_name_en = cat.name_en
+      round.category_name_ar = cat.name_ar
+    }
+
+    const instMap = new Map(institutions.map(i => [i.id, i.name]))
+
+    // Filter students for this specific round's category
+    const students = allStudents
+      .filter(s => s.category_id === round.category_id && s.review_status === 'APPROVED')
+      .map(s => ({
+        ...s,
+        institution_name: instMap.get(s.institution_id) || 'مركز الأنوار'
+      }))
+
     return (
       <ScoringClient 
         round={round}
         students={students}
         results={results}
-        deductionTypes={deduction_types}
+        deductionTypes={deductionRes.deduction_types}
+        initialRubricMode={deductionRes.rubric_mode || 'OFFICIAL_70_30'}
         dict={dict}
         locale={locale}
         token={token}

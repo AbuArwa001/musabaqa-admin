@@ -9,6 +9,7 @@ import {
   createAdminUser, createRegion, updateRegion, deleteRegion,
   listCounties, createCounty, updateCounty, deleteCounty,
   createCategory, updateCategory, getCompetitionConfig, saveCompetitionConfig,
+  getRubricMode, setRubricMode,
   listCompetitions, createCompetition, updateCompetition, deleteCompetition,
   setCurrentCompetition, addCompetitionGalleryItem, deleteCompetitionGalleryItem,
   replicateCompetitionToJamiaEvents,
@@ -20,7 +21,7 @@ import {
   UserPlus, MapPin, List, Settings, Trophy, Calendar, FileText, Sliders, Save,
   Globe, Flag, Edit, Plus, Check, Trash2, ShieldCheck, AlertCircle,
   Image as ImageIcon, Sparkles, Award, Medal, Share2, Copy, ExternalLink,
-  Eye, ChevronRight, CheckCircle2, Building, RefreshCw, X, Layers, Clock
+  Eye, ChevronRight, CheckCircle2, Building, RefreshCw, X, Layers, Clock, Scale
 } from 'lucide-react'
 import PageHeader from '@/components/PageHeader'
 import Modal from '@/components/Modal'
@@ -169,7 +170,14 @@ export default function SettingsClient({
 
   useEffect(() => {
     setCompConfig(getCompetitionConfig())
-  }, [])
+    if (token) {
+      getRubricMode(token).then(res => {
+        if (res?.rubric_mode) {
+          setCompConfig(c => ({ ...c, rubric_mode: res.rubric_mode }))
+        }
+      }).catch(() => {})
+    }
+  }, [token])
 
   // Auto-sync initial counties if database counties was empty but national_rows existed
   useEffect(() => {
@@ -177,6 +185,7 @@ export default function SettingsClient({
       setCounties(compConfig.national_rows.map((name, idx) => ({ id: idx + 1, name, active: true })))
     }
   }, [initialCounties, compConfig.national_rows])
+
 
   // Active matrix locations derived directly from harmonized state
   const activeMatrixList: string[] = isNational
@@ -627,15 +636,25 @@ export default function SettingsClient({
     } catch (e: any) { toast.error(e.message || 'Failed to update category') }
   }
 
-  const handleSaveCompetitionConfig = () => {
+  const handleSaveCompetitionConfig = async () => {
     const updatedConfig: CompetitionConfig = {
       ...compConfig,
       national_rows: counties.length > 0 ? counties.map(c => c.name) : (compConfig.national_rows || DEFAULT_NATIONAL_COUNTIES),
       county_rows: regions.length > 0 ? regions.map(r => r.name_en) : (compConfig.county_rows || []),
     }
     saveCompetitionConfig(updatedConfig)
+
+    if (token && compConfig.rubric_mode) {
+      try {
+        await setRubricMode(token, compConfig.rubric_mode)
+      } catch (e: any) {
+        console.error('Failed to sync rubric mode with backend:', e)
+      }
+    }
+
     toast.success('Competition configuration saved successfully!')
   }
+
 
   const handleGranularLimitChange = (regionName: string, juzCategory: string, val: string) => {
     setCompConfig(prev => {
@@ -897,6 +916,138 @@ export default function SettingsClient({
                     <p className="text-[11px] text-gray-500 mt-0.5">
                       Organized across Kenya&apos;s counties (Nairobi, Mombasa, Nakuru, Garissa, etc.).
                     </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Rating Rubric Mode Selector */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-gray-50/90 to-slate-50 border border-gray-200/90 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <label className="label !mb-0 flex items-center gap-2">
+                  <Scale size={16} className="text-[#006838]" />
+                  <span className="text-xs font-black tracking-wider text-gray-900 uppercase">
+                    Competition Rating Rubric System (Scoring Model)
+                  </span>
+                </label>
+                <span className="text-[11px] font-semibold text-gray-500 bg-white px-2.5 py-1 rounded-md border border-gray-200 self-start sm:self-auto">
+                  Active in Live Scoring & Official Sheets
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Choose the marks distribution and evaluation rules used by judges in active competition rounds.
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Card 1: Official 70 / 30 Rubric */}
+                <div
+                  onClick={() => setCompConfig(c => ({ ...c, rubric_mode: 'OFFICIAL_70_30' }))}
+                  className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                    (compConfig.rubric_mode || 'OFFICIAL_70_30') === 'OFFICIAL_70_30'
+                      ? 'border-[#006838] bg-emerald-50/50 shadow-sm ring-2 ring-emerald-600/10'
+                      : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-2xs'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="rubric_mode"
+                          checked={(compConfig.rubric_mode || 'OFFICIAL_70_30') === 'OFFICIAL_70_30'}
+                          onChange={() => {}}
+                          className="accent-[#006838] w-4 h-4 cursor-pointer"
+                        />
+                        <h4 className="font-bold text-sm text-gray-900">Official 70 / 30 Rubric</h4>
+                      </div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wide bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                        2026 National Standard
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-600 mb-3">
+                      Saudi Ministry & Jamia Mosque 2026 standard with strict Rule 5 warning limit (max 3 Tanbeeh).
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2.5 rounded-lg bg-white/90 border border-emerald-100/80 shadow-2xs">
+                        <div className="text-[10px] uppercase font-bold text-gray-500">Memorization (الحفظ)</div>
+                        <div className="text-base font-extrabold text-[#006838]">70 Marks</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5 font-medium">
+                          Tanbeeh -1.0 • Fath -2.0 • Lahn -2.0
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white/90 border border-emerald-100/80 shadow-2xs">
+                        <div className="text-[10px] uppercase font-bold text-gray-500">Tajweed & Performance</div>
+                        <div className="text-base font-extrabold text-amber-700">30 Marks</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5 font-medium">
+                          Tajweed Error -0.5 pts
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 font-medium">
+                    <span>Questions: 4 (Juz 30/20) • 3 (Juz 10/5)</span>
+                    <span className="font-bold text-emerald-800">Total: 100 Marks</span>
+                  </div>
+                </div>
+
+                {/* Card 2: Traditional Tiered Rubric */}
+                <div
+                  onClick={() => setCompConfig(c => ({ ...c, rubric_mode: 'TRADITIONAL_TIERED' }))}
+                  className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                    compConfig.rubric_mode === 'TRADITIONAL_TIERED'
+                      ? 'border-[#c99335] bg-amber-50/50 shadow-sm ring-2 ring-amber-600/10'
+                      : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-2xs'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="rubric_mode"
+                          checked={compConfig.rubric_mode === 'TRADITIONAL_TIERED'}
+                          onChange={() => {}}
+                          className="accent-[#c99335] w-4 h-4 cursor-pointer"
+                        />
+                        <h4 className="font-bold text-sm text-gray-900">Traditional JMC 3-Tier & 4-Tier</h4>
+                      </div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wide bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
+                        Heritage Rubric
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-gray-600 mb-3">
+                      Traditional marks rubric with dedicated voice (Sawt) & full Quran interpretation (Tafsir).
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2.5 rounded-lg bg-white/90 border border-amber-100/80 shadow-2xs">
+                        <div className="text-[10px] uppercase font-bold text-gray-500">Juz 5, 10, 15, 20</div>
+                        <div className="text-xs font-bold text-gray-800 mt-0.5">
+                          50 Hifdh • 30 Tajweed
+                        </div>
+                        <div className="text-[10px] font-extrabold text-amber-800 mt-0.5">
+                          + 20 Sawt (Voice) = 100
+                        </div>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-white/90 border border-amber-100/80 shadow-2xs">
+                        <div className="text-[10px] uppercase font-bold text-gray-500">Juz 30 (Complete Quran)</div>
+                        <div className="text-xs font-bold text-gray-800 mt-0.5">
+                          45 Hifdh • 25 Tajweed
+                        </div>
+                        <div className="text-[10px] font-extrabold text-amber-800 mt-0.5">
+                          + 10 Tafsir + 20 Sawt = 100
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 font-medium">
+                    <span>Tafsir: Judge Entered Deduction</span>
+                    <span className="font-bold text-amber-800">Total: 100 Marks</span>
                   </div>
                 </div>
               </div>

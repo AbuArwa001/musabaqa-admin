@@ -189,7 +189,7 @@ export interface StudentRead {
   deletion_reason: string | null; archived_at: string | null;
   regret_email_sent: boolean; regret_email_sent_at: string | null; created_at: string;
   nationality?: string; residence?: string; home_county?: string; alternative_phone?: string;
-  email?: string; review_notes?: string | null;
+  email?: string; review_notes?: string | null; institution_name?: string;
 }
 
 export async function listStudents(token: string, params?: Record<string, string>): Promise<StudentRead[]> {
@@ -278,7 +278,8 @@ export async function updateArchivalReason(token: string, id: number, deletion_r
 export interface RoundRead {
   id: number; category_id: number; round_type: 'PRELIMINARY' | 'FINAL';
   status: 'PENDING' | 'ACTIVE' | 'COMPLETED'; scheduled_at: string;
-  active_student_id: number | null
+  active_student_id: number | null;
+  category_name_en?: string; category_name_ar?: string;
 }
 
 export interface JudgeAssignment {
@@ -322,24 +323,144 @@ export async function setActiveStudent(token: string, roundId: number, studentId
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 
 export interface DeductionEventCreate {
-  round_id: number; student_id: number; deduction_type_id: number;
-  amount?: number; note?: string
+  round_id: number
+  student_id: number
+  deduction_type_id: number
+  question_number?: number
+  amount?: number
+  note?: string
 }
 
 export interface DeductionEventRead {
-  id: number; round_id: number; student_id: number; judge_id: number;
-  deduction_type_id: number; amount: number; logged_at: string;
-  note: string | null; consistency_flagged: boolean
+  id: number
+  round_id: number
+  student_id: number
+  judge_id: number
+  deduction_type_id: number
+  question_number: number
+  amount: number
+  logged_at: string
+  note: string | null
+  consistency_flagged: boolean
+}
+
+export interface RoundQuestionCreate {
+  round_id: number
+  student_id: number
+  question_number: number
+  envelope_number?: string | null
+  surah_name?: string | null
+  ayah_from?: number | null
+  ayah_to?: number | null
+}
+
+export interface RoundQuestionRead {
+  id: number
+  round_id: number
+  student_id: number
+  question_number: number
+  envelope_number: string | null
+  surah_name: string | null
+  ayah_from: number | null
+  ayah_to: number | null
+  created_at: string
+}
+
+export interface QuestionScoreBreakdown {
+  question_number: number
+  surah_name: string
+  ayah_from: number | null
+  ayah_to: number | null
+  envelope_number: string | null
+  tanbeeh_count: number
+  fath_count: number
+  lahn_count: number
+  tajweed_count: number
+  hifdh_deductions: number
+  tajweed_deductions: number
+  saut_deductions?: number
+  tafsir_deductions?: number
+  total_deductions: number
+  question_allotment: number
+  question_score: number
+  tanbeeh_limit_reached: boolean
 }
 
 export interface JudgeScoreSummary {
-  student_id: number; round_id: number; judge_id: number;
-  per_criterion_score: Record<string, number>; total_score: number;
-  all_judges_submitted: boolean; panel_score: number | null
+  student_id: number
+  round_id: number
+  judge_id: number
+  rubric_mode?: 'OFFICIAL_70_30' | 'TRADITIONAL_TIERED'
+  hifdh_score: number
+  tajweed_score: number
+  saut_score?: number
+  tafsir_score?: number
+  max_hifdh?: number
+  max_tajweed?: number
+  max_saut?: number
+  max_tafsir?: number
+  per_criterion_score: Record<string, number>
+  total_score: number
+  per_question: QuestionScoreBreakdown[]
+  all_judges_submitted: boolean
+  panel_score: number | null
+}
+
+export interface OfficialSheetRead {
+  round_id: number
+  student_id: number
+  student_name: string
+  nationality: string
+  age: number | null
+  institution_name: string
+  branch_name_en: string
+  branch_name_ar: string
+  branch_number: number
+  venue_ar: string
+  venue_en: string
+  date_str: string
+  judge_name: string
+  judge_id: number
+  rubric_mode?: 'OFFICIAL_70_30' | 'TRADITIONAL_TIERED'
+  questions: QuestionScoreBreakdown[]
+  total_hifdh_deduction: number
+  total_tajweed_deduction: number
+  total_saut_deduction?: number
+  total_tafsir_deduction?: number
+  final_hifdh_score: number
+  final_tajweed_score: number
+  final_saut_score?: number
+  final_tafsir_score?: number
+  max_hifdh?: number
+  max_tajweed?: number
+  max_saut?: number
+  max_tafsir?: number
+  final_score: number
+  all_judges_submitted: boolean
+  panel_score: number | null
 }
 
 export async function submitDeduction(token: string, data: DeductionEventCreate): Promise<DeductionEventRead> {
   return request('/api/v1/scoring/deductions', { method: 'POST', body: JSON.stringify(data) }, token)
+}
+
+export async function deleteDeduction(token: string, deductionId: number): Promise<DeductionEventRead> {
+  return request(`/api/v1/scoring/deductions/${deductionId}`, { method: 'DELETE' }, token)
+}
+
+export async function saveRoundQuestion(token: string, roundId: number, studentId: number, data: RoundQuestionCreate): Promise<RoundQuestionRead> {
+  return request(`/api/v1/scoring/rounds/${roundId}/students/${studentId}/questions`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }, token)
+}
+
+export async function listRoundQuestions(token: string, roundId: number, studentId: number): Promise<RoundQuestionRead[]> {
+  return request(`/api/v1/scoring/rounds/${roundId}/students/${studentId}/questions`, {}, token)
+}
+
+export async function getOfficialSheet(token: string, roundId: number, studentId: number): Promise<OfficialSheetRead> {
+  return request(`/api/v1/scoring/rounds/${roundId}/students/${studentId}/sheet`, {}, token)
 }
 
 export async function getMyScore(token: string, roundId: number, studentId: number): Promise<JudgeScoreSummary> {
@@ -354,9 +475,18 @@ export type DeductionTypeOut = {
   criteria_name: string
 }
 
-export async function getRoundDeductionTypes(token: string, roundId: number): Promise<{ deduction_types: DeductionTypeOut[] }> {
+export async function getRoundDeductionTypes(token: string, roundId: number): Promise<{ rubric_mode?: 'OFFICIAL_70_30' | 'TRADITIONAL_TIERED'; deduction_types: DeductionTypeOut[] }> {
   return request(`/api/v1/scoring/rounds/${roundId}/deduction-types`, {}, token)
 }
+
+export async function getRubricMode(token: string): Promise<{ rubric_mode: 'OFFICIAL_70_30' | 'TRADITIONAL_TIERED' }> {
+  return request('/api/v1/scoring/rubric-mode', {}, token)
+}
+
+export async function setRubricMode(token: string, mode: 'OFFICIAL_70_30' | 'TRADITIONAL_TIERED'): Promise<{ rubric_mode: 'OFFICIAL_70_30' | 'TRADITIONAL_TIERED' }> {
+  return request('/api/v1/scoring/rubric-mode', { method: 'POST', body: JSON.stringify({ rubric_mode: mode }) }, token)
+}
+
 
 // ─── Results ──────────────────────────────────────────────────────────────────
 
@@ -431,6 +561,7 @@ export async function getDossierJobStatus(token: string, jobId: string): Promise
 
 export interface CompetitionConfig {
   scope: 'NATIONAL' | 'COUNTY_REGIONAL';
+  rubric_mode?: 'OFFICIAL_70_30' | 'TRADITIONAL_TIERED';
   reg_opening_date: string;
   reg_closing_date: string;
   prelims_start_date: string;
@@ -451,7 +582,9 @@ export interface CompetitionConfig {
 
 const DEFAULT_COMPETITION_CONFIG: CompetitionConfig = {
   scope: 'NATIONAL',
+  rubric_mode: 'OFFICIAL_70_30',
   reg_opening_date: '2026-08-13',
+
   reg_closing_date: '2026-09-01',
   prelims_start_date: '2026-09-05',
   prelims_end_date: '2026-09-07',
