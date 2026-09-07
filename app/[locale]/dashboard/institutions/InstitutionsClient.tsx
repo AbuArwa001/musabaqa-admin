@@ -5,16 +5,26 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { approveInstitution, rejectInstitution, type InstitutionRead, type Region } from '@/lib/api'
+import { approveInstitution, rejectInstitution, createRosterInstitution, type InstitutionRead, type Region } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 import { formatDate } from '@/lib/utils'
-import { Check, X, Eye, Building2, Loader2 } from 'lucide-react'
+import { Check, X, Eye, Building2, Loader2, Plus, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
 import Modal from '@/components/Modal'
 import PageHeader from '@/components/PageHeader'
 
 const rejectSchema = z.object({ rejection_reason: z.string().min(5) })
 
+const intakeSchema = z.object({
+  name: z.string().min(2, 'Madrasa name is required'),
+  contact_person: z.string().min(2, 'Contact person is required'),
+  phone: z.string().min(7, 'Phone number is required'),
+  email: z.string().email('Valid email is required'),
+  region_id: z.string().optional(),
+  roster_reference: z.string().optional(),
+})
+
+type IntakeFormData = z.infer<typeof intakeSchema>
 type StatusFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export default function InstitutionsClient({
@@ -28,8 +38,19 @@ export default function InstitutionsClient({
   const [filter, setFilter] = useState<StatusFilter>('ALL')
   const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [approvingId, setApprovingId] = useState<number | null>(null)
+  const [isIntakeOpen, setIsIntakeOpen] = useState(false)
+
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<{ rejection_reason: string }>({
     resolver: zodResolver(rejectSchema)
+  })
+
+  const {
+    register: registerIntake,
+    handleSubmit: handleIntakeSubmit,
+    reset: resetIntake,
+    formState: { errors: intakeErrors, isSubmitting: isIntakeSubmitting },
+  } = useForm<IntakeFormData>({
+    resolver: zodResolver(intakeSchema),
   })
 
   const regionMap = useMemo(() => Object.fromEntries(regions.map(r => [r.id, isAr ? r.name_ar : r.name_en])), [regions, isAr])
@@ -58,6 +79,27 @@ export default function InstitutionsClient({
     } catch (e: unknown) { toast.error(e instanceof Error ? e.message : dict.common.error) }
   }
 
+  async function onIntakeSubmit(formData: IntakeFormData) {
+    try {
+      const created = await createRosterInstitution(token, {
+        name: formData.name.trim(),
+        contact_person: formData.contact_person.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        region_id: formData.region_id ? parseInt(formData.region_id, 10) : undefined,
+        roster_reference: formData.roster_reference?.trim() || undefined,
+        type: 'MADRASA',
+        preferred_language: isAr ? 'AR' : 'EN',
+      })
+      setData(d => [created, ...d])
+      toast.success(t.intake_success || 'Madrasa successfully entered from roster and approved!')
+      setIsIntakeOpen(false)
+      resetIntake()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : dict.common.error)
+    }
+  }
+
   const filters: StatusFilter[] = ['ALL', 'PENDING', 'APPROVED', 'REJECTED']
   const filterLabels: Record<StatusFilter, string> = {
     ALL: t.filter_all, PENDING: t.filter_pending, APPROVED: t.filter_approved, REJECTED: t.filter_rejected
@@ -74,6 +116,16 @@ export default function InstitutionsClient({
       <PageHeader
         title={t.title}
         subtitle={`${data.length} total registered Madrasas and institutions`}
+        actions={
+          <button
+            onClick={() => setIsIntakeOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+          >
+            <Plus size={15} />
+            <ClipboardList size={15} />
+            <span>{t.quick_intake_btn}</span>
+          </button>
+        }
       />
 
       {/* Filter Tabs matching jamia-admin */}
@@ -205,6 +257,120 @@ export default function InstitutionsClient({
             </button>
             <button type="submit" disabled={isSubmitting} className="btn-primary !bg-rose-700 hover:!bg-rose-800">
               {isSubmitting ? <><Loader2 size={15} className="animate-spin" /> Rejecting...</> : t.reject_confirm}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Quick Intake Modal (Physical Paper Roster Entry) */}
+      <Modal
+        isOpen={isIntakeOpen}
+        onClose={() => { setIsIntakeOpen(false); resetIntake() }}
+        title={t.intake_modal_title}
+        variant="default"
+        maxWidth="lg"
+      >
+        <div className="mb-4 text-xs text-gray-500 bg-amber-50/70 border border-amber-200 rounded-lg p-3">
+          <p className="font-semibold text-amber-800 mb-0.5">Physical Roster Intake Mode</p>
+          <p>{t.intake_modal_subtitle}</p>
+        </div>
+
+        <form onSubmit={handleIntakeSubmit(onIntakeSubmit)} noValidate className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="label">{t.intake_name} *</label>
+              <input
+                type="text"
+                {...registerIntake('name')}
+                placeholder={t.intake_name_ph}
+                className="input-field"
+              />
+              {intakeErrors.name && <p className="error-text">{intakeErrors.name.message}</p>}
+            </div>
+
+            <div>
+              <label className="label">{t.intake_contact} *</label>
+              <input
+                type="text"
+                {...registerIntake('contact_person')}
+                placeholder={t.intake_contact_ph}
+                className="input-field"
+              />
+              {intakeErrors.contact_person && <p className="error-text">{intakeErrors.contact_person.message}</p>}
+            </div>
+
+            <div>
+              <label className="label">{t.intake_phone} *</label>
+              <input
+                type="text"
+                {...registerIntake('phone')}
+                placeholder={t.intake_phone_ph}
+                className="input-field"
+              />
+              {intakeErrors.phone && <p className="error-text">{intakeErrors.phone.message}</p>}
+            </div>
+
+            <div>
+              <label className="label">{t.intake_email} *</label>
+              <input
+                type="email"
+                {...registerIntake('email')}
+                placeholder={t.intake_email_ph}
+                className="input-field"
+              />
+              {intakeErrors.email && <p className="error-text">{intakeErrors.email.message}</p>}
+            </div>
+
+            <div>
+              <label className="label">{t.intake_region}</label>
+              <select
+                {...registerIntake('region_id')}
+                className="input-field bg-white"
+              >
+                <option value="">{t.intake_region_select}</option>
+                {regions.map(r => (
+                  <option key={r.id} value={r.id}>
+                    {isAr ? r.name_ar : r.name_en}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="label">{t.intake_roster_ref}</label>
+              <input
+                type="text"
+                {...registerIntake('roster_reference')}
+                placeholder={t.intake_roster_ref_ph}
+                className="input-field"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => { setIsIntakeOpen(false); resetIntake() }}
+              className="btn-secondary"
+            >
+              {dict.common.cancel}
+            </button>
+            <button
+              type="submit"
+              disabled={isIntakeSubmitting}
+              className="btn-primary flex items-center gap-2"
+            >
+              {isIntakeSubmitting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={15} />
+                  <span>{t.intake_save_btn}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

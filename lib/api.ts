@@ -117,6 +117,24 @@ export async function rejectInstitution(token: string, id: number, rejection_rea
   }, token)
 }
 
+export interface InstitutionAdminIntakeCreate {
+  name: string
+  contact_person: string
+  phone: string
+  email: string
+  region_id?: number | null
+  type?: string
+  preferred_language?: 'EN' | 'AR'
+  roster_reference?: string | null
+}
+
+export async function createRosterInstitution(token: string, data: InstitutionAdminIntakeCreate): Promise<InstitutionRead> {
+  return request('/api/v1/institutions/admin-intake', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }, token)
+}
+
 // ─── Regions ──────────────────────────────────────────────────────────────────
 
 export interface Region { id: number; name_en: string; name_ar: string; county_id: number }
