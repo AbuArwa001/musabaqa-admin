@@ -6,6 +6,8 @@ import Link from 'next/link'
 import {
   submitDeduction, deleteDeduction, getMyScore, getAdminWsUrl, setActiveStudent,
   saveRoundQuestion, listRoundQuestions, getOfficialSheet,
+  getRoundDeductionTypes, setRubricMode as setRubricModeApi,
+  getCompetitionConfig, saveCompetitionConfig,
   type RoundRead, type StudentRead, type RoundResult, type JudgeScoreSummary, 
   type DeductionTypeOut, type RoundQuestionRead, type OfficialSheetRead
 } from '@/lib/api'
@@ -28,8 +30,44 @@ export default function ScoringClient({
 
   // Active Rubric Mode state (OFFICIAL_70_30 or TRADITIONAL_TIERED)
   const [rubricMode, setRubricMode] = useState<'OFFICIAL_70_30' | 'TRADITIONAL_TIERED'>(initialRubricMode || 'OFFICIAL_70_30')
+  const [activeDeductionTypes, setActiveDeductionTypes] = useState<DeductionTypeOut[]>(deductionTypes)
   const [customSautDeduct, setCustomSautDeduct] = useState('')
   const [customTafsirDeduct, setCustomTafsirDeduct] = useState('')
+
+  // Synchronize rubric mode with local settings and fetch latest deduction types on mount & storage change
+  useEffect(() => {
+    const config = getCompetitionConfig()
+    if (config?.rubric_mode) {
+      setRubricMode(config.rubric_mode)
+    }
+
+    getRoundDeductionTypes(token, round.id)
+      .then(res => {
+        if (res.rubric_mode) {
+          setRubricMode(res.rubric_mode)
+          const currentConfig = getCompetitionConfig()
+          saveCompetitionConfig({ ...currentConfig, rubric_mode: res.rubric_mode })
+        }
+        if (res.deduction_types?.length) {
+          setActiveDeductionTypes(res.deduction_types)
+        }
+      })
+      .catch(e => console.warn('Could not refresh deduction types:', e))
+
+    const onStorage = () => {
+      const updated = getCompetitionConfig()
+      if (updated?.rubric_mode) {
+        setRubricMode(updated.rubric_mode)
+        getRoundDeductionTypes(token, round.id)
+          .then(res => {
+            if (res.deduction_types?.length) setActiveDeductionTypes(res.deduction_types)
+          })
+          .catch(() => {})
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [round.id, token])
 
   // Default to round's active student if set, else first student for Moderators
   const initialActive = round.active_student_id || (isModerator && students.length > 0 ? students[0].id : null)
@@ -140,6 +178,13 @@ export default function ScoringClient({
         } else if (data.type === 'RUBRIC_MODE_CHANGED') {
           if (data.rubric_mode) {
             setRubricMode(data.rubric_mode)
+            const cfg = getCompetitionConfig()
+            saveCompetitionConfig({ ...cfg, rubric_mode: data.rubric_mode })
+            getRoundDeductionTypes(token, round.id)
+              .then(res => {
+                if (res.deduction_types?.length) setActiveDeductionTypes(res.deduction_types)
+              })
+              .catch(() => {})
           }
           if (activeStudentId !== null) {
             loadStudentData(activeStudentId)
@@ -181,7 +226,7 @@ export default function ScoringClient({
         isWarning: true,
         bgColor: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-400/30 text-amber-900',
         badgeColor: 'bg-amber-500 text-white',
-        targetType: deductionTypes.find(d => d.name_ar.includes('تنبيه') || d.name_en.toLowerCase().includes('tanbeeh') || (d.criteria_name === 'Memorization' && d.points_deducted === 1.0))
+        targetType: activeDeductionTypes.find(d => d.name_ar.includes('تنبيه') || d.name_en.toLowerCase().includes('tanbeeh') || (d.criteria_name === 'Memorization' && d.points_deducted === 1.0))
       },
       {
         key: 'fath',
@@ -193,7 +238,7 @@ export default function ScoringClient({
         isWarning: false,
         bgColor: 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-400/30 text-rose-900',
         badgeColor: 'bg-rose-600 text-white',
-        targetType: deductionTypes.find(d => d.name_ar.includes('الفتح') || d.name_en.toLowerCase().includes('fath') || (d.criteria_name === 'Memorization' && d.points_deducted === 2.0))
+        targetType: activeDeductionTypes.find(d => d.name_ar.includes('الفتح') || d.name_en.toLowerCase().includes('fath') || (d.criteria_name === 'Memorization' && d.points_deducted === 2.0))
       },
       {
         key: 'lahn',
@@ -205,7 +250,7 @@ export default function ScoringClient({
         isWarning: false,
         bgColor: 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-400/30 text-purple-900',
         badgeColor: 'bg-purple-600 text-white',
-        targetType: deductionTypes.find(d => d.name_ar.includes('اللحن') || d.name_en.toLowerCase().includes('lahn') || (d.criteria_name === 'Memorization' && d.points_deducted === 2.0))
+        targetType: activeDeductionTypes.find(d => d.name_ar.includes('اللحن') || d.name_en.toLowerCase().includes('lahn') || (d.criteria_name === 'Memorization' && d.points_deducted === 2.0))
       },
       {
         key: 'tajweed',
@@ -217,26 +262,26 @@ export default function ScoringClient({
         isWarning: false,
         bgColor: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-400/30 text-emerald-900',
         badgeColor: 'bg-emerald-700 text-white',
-        targetType: deductionTypes.find(d => d.name_ar.includes('تجويد') || d.name_en.toLowerCase().includes('tajweed') || d.points_deducted === 0.5)
+        targetType: activeDeductionTypes.find(d => d.name_ar.includes('تجويد') || d.name_en.toLowerCase().includes('tajweed') || d.points_deducted === 0.5)
       },
     ]
-  }, [deductionTypes])
+  }, [activeDeductionTypes])
 
   const sautType = useMemo(() => {
-    return deductionTypes.find(d => 
+    return activeDeductionTypes.find(d => 
       d.criteria_name?.toLowerCase().includes('saut') || 
       d.name_en?.toLowerCase().includes('saut') || 
       d.name_ar?.includes('صوت')
     )
-  }, [deductionTypes])
+  }, [activeDeductionTypes])
 
   const tafsirType = useMemo(() => {
-    return deductionTypes.find(d => 
+    return activeDeductionTypes.find(d => 
       d.criteria_name?.toLowerCase().includes('tafsir') || 
       d.name_en?.toLowerCase().includes('tafsir') || 
       d.name_ar?.includes('تفسير')
     )
-  }, [deductionTypes])
+  }, [activeDeductionTypes])
 
   const currentQBreakdown = myScore?.per_question?.find(q => q.question_number === selectedQuestion)
   const currentTanbeehCount = currentQBreakdown?.tanbeeh_count || 0
@@ -369,14 +414,44 @@ export default function ScoringClient({
           <ArrowLeft size={14} /> Back to Rounds
         </Link>
         <div className="flex items-center gap-3">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg border hidden sm:inline-flex items-center gap-1.5 ${
-            isTraditional 
-              ? 'bg-amber-50 text-amber-900 border-amber-200' 
-              : 'bg-emerald-50 text-emerald-900 border-emerald-200'
-          }`}>
+          {/* Rubric Mode Indicator / Quick Switcher */}
+          <button
+            type="button"
+            onClick={async () => {
+              const nextMode = isTraditional ? 'OFFICIAL_70_30' : 'TRADITIONAL_TIERED'
+              setRubricMode(nextMode)
+              const cfg = getCompetitionConfig()
+              saveCompetitionConfig({ ...cfg, rubric_mode: nextMode })
+              
+              if (token) {
+                try {
+                  await setRubricModeApi(token, nextMode)
+                  const res = await getRoundDeductionTypes(token, round.id)
+                  if (res.deduction_types?.length) setActiveDeductionTypes(res.deduction_types)
+                } catch (e) {
+                  console.warn('Backend sync deferred:', e)
+                }
+              }
+              if (activeStudentId) {
+                loadStudentData(activeStudentId)
+              }
+              toast.success(
+                nextMode === 'TRADITIONAL_TIERED'
+                  ? (isAr ? 'تم التحويل إلى معيار الجمعية التقليدي (3 و 4 مستويات)' : 'Switched to Traditional JMC Rubric (3-Tier & 4-Tier)')
+                  : (isAr ? 'تم التحويل إلى معيار 70 / 30 الرسمي (Saudi 2026)' : 'Switched to Official 70/30 Rubric (Saudi 2026)')
+              )
+            }}
+            title={isAr ? 'اضغط للتبديل السريع بين المعيار الرسمي ومعيار الجمعية' : 'Click to toggle between Official 70/30 and Traditional JMC'}
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border hidden sm:inline-flex items-center gap-1.5 cursor-pointer hover:shadow-xs transition-all active:scale-95 ${
+              isTraditional 
+                ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100' 
+                : 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+            }`}
+          >
             <Scale size={13} className={isTraditional ? 'text-[#c99335]' : 'text-[#006838]'} />
             <span>{isTraditional ? 'Traditional JMC (50/30/20 & 45/25/10/20)' : 'Official 70/30 Rubric (Saudi 2026)'}</span>
-          </span>
+            <span className="text-[10px] font-bold underline opacity-75 ml-1">⇄ {isAr ? 'تبديل' : 'Switch'}</span>
+          </button>
 
           {activeStudent && (
             <>

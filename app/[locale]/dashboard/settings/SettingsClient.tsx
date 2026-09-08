@@ -655,6 +655,36 @@ export default function SettingsClient({
     toast.success('Competition configuration saved successfully!')
   }
 
+  const handleSelectRubricMode = async (mode: 'OFFICIAL_70_30' | 'TRADITIONAL_TIERED') => {
+    setCompConfig(c => ({ ...c, rubric_mode: mode }))
+    const updated = { ...compConfig, rubric_mode: mode }
+    saveCompetitionConfig(updated)
+
+    if (token) {
+      try {
+        await setRubricMode(token, mode)
+        toast.success(
+          mode === 'OFFICIAL_70_30'
+            ? (isAr ? 'تم تفعيل معيار 70 / 30 الرسمي (Saudi 2026)' : 'Switched to Official 70 / 30 Rubric (Saudi 2026)')
+            : (isAr ? 'تم تفعيل معيار الجمعية التقليدي (3 و 4 مستويات)' : 'Switched to Traditional JMC Rubric (3-Tier & 4-Tier)')
+        )
+      } catch (e: any) {
+        console.warn('Backend rubric sync deferred:', e)
+        toast.success(
+          mode === 'OFFICIAL_70_30'
+            ? 'Active Rubric saved: Official 70/30 Standard'
+            : 'Active Rubric saved: Traditional JMC 3-Tier & 4-Tier'
+        )
+      }
+    } else {
+      toast.success(
+        mode === 'OFFICIAL_70_30'
+          ? 'Active Rubric saved: Official 70/30 Standard'
+          : 'Active Rubric saved: Traditional JMC 3-Tier & 4-Tier'
+      )
+    }
+  }
+
 
   const handleGranularLimitChange = (regionName: string, juzCategory: string, val: string) => {
     setCompConfig(prev => {
@@ -941,7 +971,7 @@ export default function SettingsClient({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Card 1: Official 70 / 30 Rubric */}
                 <div
-                  onClick={() => setCompConfig(c => ({ ...c, rubric_mode: 'OFFICIAL_70_30' }))}
+                  onClick={() => handleSelectRubricMode('OFFICIAL_70_30')}
                   className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                     (compConfig.rubric_mode || 'OFFICIAL_70_30') === 'OFFICIAL_70_30'
                       ? 'border-[#006838] bg-emerald-50/50 shadow-sm ring-2 ring-emerald-600/10'
@@ -955,7 +985,7 @@ export default function SettingsClient({
                           type="radio"
                           name="rubric_mode"
                           checked={(compConfig.rubric_mode || 'OFFICIAL_70_30') === 'OFFICIAL_70_30'}
-                          onChange={() => {}}
+                          onChange={() => handleSelectRubricMode('OFFICIAL_70_30')}
                           className="accent-[#006838] w-4 h-4 cursor-pointer"
                         />
                         <h4 className="font-bold text-sm text-gray-900">Official 70 / 30 Rubric</h4>
@@ -995,7 +1025,7 @@ export default function SettingsClient({
 
                 {/* Card 2: Traditional Tiered Rubric */}
                 <div
-                  onClick={() => setCompConfig(c => ({ ...c, rubric_mode: 'TRADITIONAL_TIERED' }))}
+                  onClick={() => handleSelectRubricMode('TRADITIONAL_TIERED')}
                   className={`relative p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                     compConfig.rubric_mode === 'TRADITIONAL_TIERED'
                       ? 'border-[#c99335] bg-amber-50/50 shadow-sm ring-2 ring-amber-600/10'
@@ -1009,7 +1039,7 @@ export default function SettingsClient({
                           type="radio"
                           name="rubric_mode"
                           checked={compConfig.rubric_mode === 'TRADITIONAL_TIERED'}
-                          onChange={() => {}}
+                          onChange={() => handleSelectRubricMode('TRADITIONAL_TIERED')}
                           className="accent-[#c99335] w-4 h-4 cursor-pointer"
                         />
                         <h4 className="font-bold text-sm text-gray-900">Traditional JMC 3-Tier & 4-Tier</h4>
