@@ -29,8 +29,8 @@ export default async function ScorePage({
     const [round, allStudents, results, deductionRes, categories, institutions] = await Promise.all([
       getRound(token, roundId),
       listStudents(token),
-      getRoundResults(token, roundId),
-      import('@/lib/api').then(m => m.getRoundDeductionTypes(token, roundId)),
+      getRoundResults(token, roundId).catch(() => []),
+      import('@/lib/api').then(m => m.getRoundDeductionTypes(token, roundId)).catch(() => ({ rubric_mode: 'OFFICIAL_70_30' as const, deduction_types: [] })),
       import('@/lib/api').then(m => m.listCategories().catch(() => [])),
       import('@/lib/api').then(m => m.listInstitutions(token).catch(() => [])),
     ])
