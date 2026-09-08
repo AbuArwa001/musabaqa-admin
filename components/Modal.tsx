@@ -9,7 +9,7 @@ interface ModalProps {
   title: string
   variant?: 'default' | 'danger' | 'warning' | 'success'
   children: React.ReactNode
-  maxWidth?: 'sm' | 'md' | 'lg'
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 }
 
 const variantStyles = {
@@ -31,7 +31,7 @@ const variantStyles = {
   },
 }
 
-const maxWidths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' }
+const maxWidths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl', '2xl': 'max-w-6xl' }
 
 export default function Modal({ isOpen, onClose, title, variant = 'default', children, maxWidth = 'md' }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null)

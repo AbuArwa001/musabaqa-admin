@@ -8,10 +8,11 @@ import { toast } from 'sonner'
 import { approveInstitution, rejectInstitution, createRosterInstitution, type InstitutionRead, type Region } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 import { formatDate } from '@/lib/utils'
-import { Check, X, Eye, Building2, Loader2, Plus, ClipboardList } from 'lucide-react'
+import { Check, X, Eye, Building2, Loader2, Plus, ClipboardList, Upload } from 'lucide-react'
 import Link from 'next/link'
 import Modal from '@/components/Modal'
 import PageHeader from '@/components/PageHeader'
+import RosterUploadModal from './_components/RosterUploadModal'
 
 const rejectSchema = z.object({ rejection_reason: z.string().min(5) })
 
@@ -39,6 +40,7 @@ export default function InstitutionsClient({
   const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [isIntakeOpen, setIsIntakeOpen] = useState(false)
+  const [isRosterModalOpen, setIsRosterModalOpen] = useState(false)
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<{ rejection_reason: string }>({
     resolver: zodResolver(rejectSchema)
@@ -117,14 +119,23 @@ export default function InstitutionsClient({
         title={t.title}
         subtitle={`${data.length} total registered Madrasas and institutions`}
         actions={
-          <button
-            onClick={() => setIsIntakeOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
-          >
-            <Plus size={15} />
-            <ClipboardList size={15} />
-            <span>{t.quick_intake_btn}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsRosterModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+              <Upload size={15} />
+              <ClipboardList size={15} />
+              <span>{t.upload_roster_btn || t.quick_intake_btn}</span>
+            </button>
+            <button
+              onClick={() => setIsIntakeOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>{t.manual_intake_btn || 'Single Entry'}</span>
+            </button>
+          </div>
         }
       />
 
@@ -375,6 +386,20 @@ export default function InstitutionsClient({
           </div>
         </form>
       </Modal>
+
+      {/* Batch Roster Intake Modal (Physical / Handwritten / HTML / Scan) */}
+      <RosterUploadModal
+        isOpen={isRosterModalOpen}
+        onClose={() => setIsRosterModalOpen(false)}
+        onImportSuccess={(newInsts) => {
+          setData(prev => [...newInsts, ...prev])
+        }}
+        existingInstitutions={data}
+        regions={regions}
+        locale={locale}
+        token={token}
+        dict={dict}
+      />
     </div>
   )
 }

@@ -128,10 +128,26 @@ export interface InstitutionAdminIntakeCreate {
   roster_reference?: string | null
 }
 
+export interface BatchIntakeResult {
+  created: InstitutionRead[]
+  skipped: Array<{ name: string; email: string; reason: string }>
+  total_created: number
+}
+
 export async function createRosterInstitution(token: string, data: InstitutionAdminIntakeCreate): Promise<InstitutionRead> {
   return request('/api/v1/institutions/admin-intake', {
     method: 'POST',
     body: JSON.stringify(data),
+  }, token)
+}
+
+export async function batchIntakeInstitutions(
+  token: string,
+  institutions: InstitutionAdminIntakeCreate[]
+): Promise<BatchIntakeResult> {
+  return request('/api/v1/institutions/batch-intake', {
+    method: 'POST',
+    body: JSON.stringify({ institutions }),
   }, token)
 }
 
