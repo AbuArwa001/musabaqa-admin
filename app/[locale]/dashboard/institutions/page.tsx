@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { isValidLocale, getDictionary } from '@/lib/dictionaries'
-import { listInstitutions, listRegions } from '@/lib/api'
+import { listInstitutions, listRegions, listCounties } from '@/lib/api'
 import InstitutionsClient from './InstitutionsClient'
 
 export const dynamic = 'force-dynamic'
@@ -14,10 +14,11 @@ export default async function InstitutionsPage({ params }: { params: Promise<{ l
   const token = store.get('musabaqa_admin_token')!.value
   const dict = await getDictionary(locale)
 
-  const [institutions, regions] = await Promise.all([
+  const [institutions, regions, counties] = await Promise.all([
     listInstitutions(token).catch(() => []),
     listRegions().catch(() => []),
+    listCounties().catch(() => []),
   ])
 
-  return <InstitutionsClient initialData={institutions} regions={regions} dict={dict} locale={locale} token={token} />
+  return <InstitutionsClient initialData={institutions} regions={regions} counties={counties} dict={dict} locale={locale} token={token} />
 }

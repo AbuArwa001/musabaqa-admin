@@ -10,7 +10,7 @@ import {
 import Modal from '@/components/Modal'
 import { 
   batchIntakeInstitutions, createRosterInstitution, 
-  type InstitutionRead, type Region, type InstitutionAdminIntakeCreate 
+  type InstitutionRead, type Region, type County, type InstitutionAdminIntakeCreate 
 } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 
@@ -18,12 +18,15 @@ export interface ParsedRosterItem {
   id: string
   rowNumber: number
   name: string
+  county?: string
+  subcounty?: string
   area: string
   contact_person: string
   phone: string
   email: string
-  students_count?: string
+  county_id?: number | null
   region_id?: number | null
+  students_count?: string
   selected: boolean
   isDuplicate?: boolean
 }
@@ -34,28 +37,27 @@ interface RosterUploadModalProps {
   onImportSuccess: (newInstitutions: InstitutionRead[]) => void
   existingInstitutions: InstitutionRead[]
   regions: Region[]
+  counties?: County[]
   locale: string
   token: string
   dict: Dict
 }
 
 const SAMPLE_ROSTER_ITEMS: Omit<ParsedRosterItem, 'id' | 'selected' | 'isDuplicate'>[] = [
-  { rowNumber: 1, name: "Madrasa Darul Qur'an", area: "Nairobi / Eastleigh", contact_person: "Sh. Abdullahi Mohamed", phone: "0722849201", email: "darulquran.nbi@gmail.com", students_count: "4" },
-  { rowNumber: 2, name: "Markaz Nuur Al-Huda", area: "Kasarani", contact_person: "Ustadh Hassan Ali", phone: "0711345678", email: "nuuralhuda.ke@gmail.com", students_count: "4" },
-  { rowNumber: 3, name: "Madrasa Al-Rowdha", area: "South C", contact_person: "Sh. Omar Farooq", phone: "0733456789", email: "rowdha.southc@gmail.com", students_count: "3" },
-  { rowNumber: 4, name: "Jamia Institute of Quran", area: "Nairobi CBD", contact_person: "Dr. Bilal Philips", phone: "0720123456", email: "quran.institute@jamia.or.ke", students_count: "4" },
-  { rowNumber: 5, name: "Madrasa Ibn Kathir", area: "Westlands", contact_person: "Ustadh Yusuf Adan", phone: "0724567890", email: "ibnkathir.wld@gmail.com", students_count: "4" },
-  { rowNumber: 6, name: "Markaz Al-Furqan Islamic Centre", area: "Pangani", contact_person: "Sh. Ibrahim Noor", phone: "0725678901", email: "alfurqan.pgani@gmail.com", students_count: "4" },
-  { rowNumber: 7, name: "Madrasa Bilal Al-Habashi", area: "Kibra", contact_person: "Ustadh Abdirahman Ismael", phone: "0726789012", email: "bilal.kibra@gmail.com", students_count: "3" },
-  { rowNumber: 8, name: "Madrasa Al-Hikmah", area: "Dandora", contact_person: "Sh. Khalid Abdi", phone: "0727890123", email: "alhikmah.dnd@gmail.com", students_count: "4" },
-  { rowNumber: 9, name: "Markaz Zaid Ibn Thabit", area: "Kiamaiko", contact_person: "Ustadh Mustafa Said", phone: "0728901234", email: "zaidthabit.kmk@gmail.com", students_count: "4" },
-  { rowNumber: 10, name: "Madrasa Al-Taqwa", area: "South B", contact_person: "Sh. Hussein Jama", phone: "0729012345", email: "altaqwa.sb@gmail.com", students_count: "4" },
-  { rowNumber: 11, name: "Madrasa Huda Islamic Centre", area: "Komarock", contact_person: "Ustadh Yunus Osman", phone: "0730123456", email: "huda.komarock@gmail.com", students_count: "3" },
-  { rowNumber: 12, name: "Markaz Abu Bakr As-Siddiq", area: "Kayole", contact_person: "Sh. Harun Rashid", phone: "0731234567", email: "abubakr.kayole@gmail.com", students_count: "4" }
+  { rowNumber: 1, name: "Madrasa Darul Qur'an", county: "Nairobi", subcounty: "Eastleigh", area: "Nairobi, Eastleigh", contact_person: "Sh. Abdullahi Mohamed", phone: "0722849201", email: "darulquran.nbi@gmail.com" },
+  { rowNumber: 2, name: "Markaz Nuur Al-Huda", county: "Nairobi", subcounty: "Kasarani", area: "Nairobi, Kasarani", contact_person: "Ustadh Hassan Ali", phone: "0711345678", email: "nuuralhuda.ke@gmail.com" },
+  { rowNumber: 3, name: "Madrasa Al-Rowdha", county: "Nairobi", subcounty: "South C", area: "Nairobi, South C", contact_person: "Sh. Omar Farooq", phone: "0733456789", email: "rowdha.southc@gmail.com" },
+  { rowNumber: 4, name: "Jamia Institute of Quran", county: "Nairobi", subcounty: "Nairobi CBD", area: "Nairobi, CBD", contact_person: "Dr. Bilal Philips", phone: "0720123456", email: "quran.institute@jamia.or.ke" },
+  { rowNumber: 5, name: "Madrasa Ibn Kathir", county: "Nairobi", subcounty: "Westlands", area: "Nairobi, Westlands", contact_person: "Ustadh Yusuf Adan", phone: "0724567890", email: "ibnkathir.wld@gmail.com" },
+  { rowNumber: 6, name: "Markaz Al-Furqan Islamic Centre", county: "Nairobi", subcounty: "Pangani", area: "Nairobi, Pangani", contact_person: "Sh. Ibrahim Noor", phone: "0725678901", email: "alfurqan.pgani@gmail.com" },
+  { rowNumber: 7, name: "Madrasa Bilal Al-Habashi", county: "Nairobi", subcounty: "Kibra", area: "Nairobi, Kibra", contact_person: "Ustadh Abdirahman Ismael", phone: "0726789012", email: "bilal.kibra@gmail.com" },
+  { rowNumber: 8, name: "Madrasa Al-Hikmah", county: "Nairobi", subcounty: "Dandora", area: "Nairobi, Dandora", contact_person: "Sh. Khalid Abdi", phone: "0727890123", email: "alhikmah.dnd@gmail.com" },
+  { rowNumber: 9, name: "Markaz Zaid Ibn Thabit", county: "Nairobi", subcounty: "Kiamaiko", area: "Nairobi, Kiamaiko", contact_person: "Ustadh Mustafa Said", phone: "0728901234", email: "zaidthabit.kmk@gmail.com" },
+  { rowNumber: 10, name: "Markaz bin baduta", county: "Mombasa", subcounty: "Kiziei", area: "Mombasa, Kiziei", contact_person: "Riziki Mohamed", phone: "0719401851", email: "darcezmoha@gmail.com" },
 ]
 
 export default function RosterUploadModal({
-  isOpen, onClose, onImportSuccess, existingInstitutions, regions, locale, token, dict
+  isOpen, onClose, onImportSuccess, existingInstitutions, regions, counties = [], locale, token, dict
 }: RosterUploadModalProps) {
   const isAr = locale === 'ar'
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -90,6 +92,19 @@ export default function RosterUploadModal({
     }
   }
 
+  // County matcher helper
+  const matchCounty = (countyText: string): number | null => {
+    if (!countyText || !counties || counties.length === 0) return null
+    const clean = countyText.toLowerCase().replace(/county/g, '').trim()
+    for (const c of counties) {
+      const cClean = c.name.toLowerCase().replace(/county/g, '').trim()
+      if (clean.includes(cClean) || cClean.includes(clean)) {
+        return c.id
+      }
+    }
+    return null
+  }
+
   // Region matcher helper
   const matchRegion = (areaText: string): number | null => {
     if (!areaText) return null
@@ -111,14 +126,37 @@ export default function RosterUploadModal({
       const emailLower = it.email.toLowerCase()
       const nameLower = it.name.toLowerCase()
       const isDup = existingEmails.has(emailLower) || existingNames.has(nameLower)
-      const matchedRegion = it.region_id || matchRegion(it.area)
+
+      let county = it.county || ''
+      let subcounty = it.subcounty || ''
+      let area = it.area || ''
+
+      if (!county && area.includes(',')) {
+        const parts = area.split(',')
+        county = parts[0].trim()
+        subcounty = parts.slice(1).join(',').trim()
+      } else if (county && !area) {
+        area = [county, subcounty].filter(Boolean).join(', ')
+      }
+
+      const matchedCountyId = it.county_id || matchCounty(county || area)
+      const matchedRegionId = it.region_id || matchRegion(subcounty || area)
+
+      if (matchedCountyId && !county && counties) {
+        const found = counties.find(c => c.id === matchedCountyId)
+        if (found) county = found.name
+      }
 
       return {
         ...it,
         id: `roster-item-${Date.now()}-${idx}`,
+        county,
+        subcounty,
+        area,
         selected: !isDup, // auto-select clean entries, leave duplicates unselected by default
         isDuplicate: isDup,
-        region_id: matchedRegion,
+        county_id: matchedCountyId,
+        region_id: matchedRegionId,
       }
     })
   }
@@ -195,7 +233,6 @@ export default function RosterUploadModal({
         const mudirText = cleanCell(cells[3])
         const phoneText = cleanCell(cells[4])
         const emailText = cleanCell(cells[5])
-        const studentsText = cleanCell(cells[6])
 
         // Only include non-empty rows where Madrasa Name is present
         if (nameText && nameText.length > 2 && nameText !== '&nbsp;') {
@@ -203,14 +240,25 @@ export default function RosterUploadModal({
           const fallbackEmail = emailText || `${nameText.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com`
           const fallbackPhone = phoneText || `07${Math.floor(10000000 + Math.random() * 90000000)}`
 
+          let county = ''
+          let subcounty = ''
+          if (areaText.includes(',')) {
+            const parts = areaText.split(',')
+            county = parts[0].trim()
+            subcounty = parts.slice(1).join(',').trim()
+          } else {
+            county = areaText
+          }
+
           parsed.push({
             rowNumber: rowNum,
             name: nameText,
+            county,
+            subcounty,
             area: areaText || 'Nairobi',
             contact_person: mudirText || 'Madrasa Administrator',
             phone: fallbackPhone,
             email: fallbackEmail,
-            students_count: studentsText || '4'
           })
         }
       }
@@ -298,20 +346,22 @@ export default function RosterUploadModal({
         {
           rowNumber: 1,
           name: 'Ummul Qura Institute',
+          county: 'Nairobi',
+          subcounty: 'Eastleigh',
           area: 'Nairobi, Eastleigh',
           contact_person: 'Khalfan Alhassan',
           phone: '0740403037',
           email: 'khalfan@khalfan.dev',
-          students_count: '45',
         },
         {
           rowNumber: 2,
           name: 'Markaz bin baduta',
+          county: 'Mombasa',
+          subcounty: 'Kiziei',
           area: 'Mombasa, Kiziei',
           contact_person: 'Riziki Mohamed',
           phone: '0719401851',
           email: 'darcezmoha@gmail.com',
-          students_count: '70',
         },
       ]
       setItems(decorateItems(fallbackHandwritten))
@@ -377,10 +427,10 @@ export default function RosterUploadModal({
         contact_person: it.contact_person.trim() || 'Administrator',
         phone: it.phone.trim() || '0700000000',
         email: it.email.trim().toLowerCase(),
+        county_id: it.county_id || undefined,
         region_id: it.region_id || undefined,
         type: 'MADRASA' as any,
         preferred_language: isAr ? 'AR' as any : 'EN' as any,
-        pre_allocated_students: parseInt(it.students_count || '4', 10) || 4,
       }))
 
       // Call API batch intake
@@ -416,15 +466,16 @@ export default function RosterUploadModal({
       for (let i = 0; i < selectedItems.length; i++) {
         const it = selectedItems[i]
         try {
-          const created = await createRosterInstitution(token, {
-            name: it.name.trim(),
-            contact_person: it.contact_person.trim(),
-            phone: it.phone.trim(),
-            email: it.email.trim().toLowerCase(),
-            region_id: it.region_id || undefined,
-            type: 'MADRASA' as any,
-            preferred_language: isAr ? 'AR' as any : 'EN' as any,
-          })
+            const created = await createRosterInstitution(token, {
+              name: it.name.trim(),
+              contact_person: it.contact_person.trim(),
+              phone: it.phone.trim(),
+              email: it.email.trim().toLowerCase(),
+              county_id: it.county_id || undefined,
+              region_id: it.region_id || undefined,
+              type: 'MADRASA' as any,
+              preferred_language: isAr ? 'AR' as any : 'EN' as any,
+            })
           newInsts.push(created)
           successCount++
         } catch (e) {
@@ -682,7 +733,8 @@ export default function RosterUploadModal({
                     </th>
                     <th className="p-2.5 w-8 font-bold text-gray-500">#</th>
                     <th className="p-2.5 font-bold text-gray-700">Madrasa Official Name</th>
-                    <th className="p-2.5 font-bold text-gray-700">Area / Region</th>
+                    <th className="p-2.5 font-bold text-gray-700">County</th>
+                    <th className="p-2.5 font-bold text-gray-700">Sub-County / Area</th>
                     <th className="p-2.5 font-bold text-gray-700">Headteacher / Mudir</th>
                     <th className="p-2.5 font-bold text-gray-700">Phone</th>
                     <th className="p-2.5 font-bold text-gray-700">Portal Email</th>
@@ -691,7 +743,7 @@ export default function RosterUploadModal({
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-400 font-medium">
+                      <td colSpan={8} className="py-8 text-center text-gray-400 font-medium">
                         No madaris found matching filter.
                       </td>
                     </tr>
@@ -725,17 +777,53 @@ export default function RosterUploadModal({
                         </td>
                         <td className="p-2.5">
                           <select
-                            value={it.region_id || ''}
-                            onChange={e => handleUpdateItem(it.id, 'region_id', e.target.value ? parseInt(e.target.value, 10) : null)}
-                            className="px-1.5 py-1 text-xs border border-gray-200 rounded bg-white text-gray-700 max-w-[140px]"
+                            value={it.county_id || ''}
+                            onChange={e => {
+                              const val = e.target.value ? parseInt(e.target.value, 10) : null
+                              handleUpdateItem(it.id, 'county_id', val)
+                              const found = counties.find(c => c.id === val)
+                              if (found) handleUpdateItem(it.id, 'county', found.name)
+                            }}
+                            className="px-1.5 py-1 text-xs border border-gray-200 rounded bg-white text-gray-700 max-w-[130px]"
                           >
-                            <option value="">{it.area || 'Select Region'}</option>
-                            {regions.map(r => (
-                              <option key={r.id} value={r.id}>
-                                {isAr ? r.name_ar : r.name_en}
+                            <option value="">{it.county || 'Select County'}</option>
+                            {counties.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
                               </option>
                             ))}
                           </select>
+                        </td>
+                        <td className="p-2.5">
+                          <div className="flex flex-col gap-1">
+                            <input
+                              type="text"
+                              value={it.subcounty || it.area}
+                              placeholder="e.g. Eastleigh"
+                              onChange={e => {
+                                const val = e.target.value
+                                handleUpdateItem(it.id, 'subcounty', val)
+                                handleUpdateItem(it.id, 'area', `${it.county ? it.county + ', ' : ''}${val}`)
+                                const regId = matchRegion(val)
+                                if (regId) handleUpdateItem(it.id, 'region_id', regId)
+                              }}
+                              className="w-full px-2 py-1 text-gray-700 border border-transparent hover:border-gray-300 focus:border-emerald-500 rounded bg-transparent focus:bg-white text-xs"
+                            />
+                            {regions.length > 0 && (
+                              <select
+                                value={it.region_id || ''}
+                                onChange={e => handleUpdateItem(it.id, 'region_id', e.target.value ? parseInt(e.target.value, 10) : null)}
+                                className="text-[10px] text-gray-500 bg-gray-50 border border-gray-200 rounded px-1 py-0.5"
+                              >
+                                <option value="">Region Link: Auto</option>
+                                {regions.map(r => (
+                                  <option key={r.id} value={r.id}>
+                                    {isAr ? r.name_ar : r.name_en}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
                         </td>
                         <td className="p-2.5">
                           <input

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { approveInstitution, rejectInstitution, createRosterInstitution, type InstitutionRead, type Region } from '@/lib/api'
+import { approveInstitution, rejectInstitution, createRosterInstitution, type InstitutionRead, type Region, type County } from '@/lib/api'
 import type { Dict } from '@/lib/dictionaries'
 import { formatDate } from '@/lib/utils'
 import { Check, X, Eye, Building2, Loader2, Plus, ClipboardList, Upload } from 'lucide-react'
@@ -29,9 +29,9 @@ type IntakeFormData = z.infer<typeof intakeSchema>
 type StatusFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export default function InstitutionsClient({
-  initialData, regions, dict, locale, token,
+  initialData, regions, counties = [], dict, locale, token,
 }: {
-  initialData: InstitutionRead[], regions: Region[], dict: Dict, locale: string, token: string
+  initialData: InstitutionRead[], regions: Region[], counties?: County[], dict: Dict, locale: string, token: string
 }) {
   const t = dict.institutions
   const isAr = locale === 'ar'
@@ -396,6 +396,7 @@ export default function InstitutionsClient({
         }}
         existingInstitutions={data}
         regions={regions}
+        counties={counties}
         locale={locale}
         token={token}
         dict={dict}

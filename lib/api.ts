@@ -122,6 +122,7 @@ export interface InstitutionAdminIntakeCreate {
   contact_person: string
   phone: string
   email: string
+  county_id?: number | null
   region_id?: number | null
   type?: string
   preferred_language?: 'EN' | 'AR'

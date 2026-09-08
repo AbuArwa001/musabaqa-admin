@@ -22,11 +22,14 @@ buf_wm = io.BytesIO()
 wm_resized.save(buf_wm, format='PNG', optimize=True)
 b64_watermark = base64.b64encode(buf_wm.getvalue()).decode('utf-8')
 
+# 5 sheets of 10 rows each = 50 rows total
+# Each row has increased vertical height (13.5mm) and removed Students & Entered columns
 pages_data = [
-    (1, 1, 13),
-    (2, 14, 26),
-    (3, 27, 38),
-    (4, 39, 50),
+    (1, 1, 10),
+    (2, 11, 20),
+    (3, 21, 30),
+    (4, 31, 40),
+    (5, 41, 50),
 ]
 
 def make_rows(start, end):
@@ -41,17 +44,15 @@ def make_rows(start, end):
           <td>&nbsp;</td>
           <td>&nbsp;</td>
           <td>&nbsp;</td>
-          <td>&nbsp;</td>
-          <td style="text-align: center;"><span class="check-box"></span></td>
         </tr>'''
     return rows_html
 
 pages_html = ""
 for page_num, start, end in pages_data:
     rows = make_rows(start, end)
-    is_last = (page_num == 4)
+    is_last = (page_num == 5)
     footer_extra = "Secretariat Lead Endorsement: ___________________________ Signature: ___________________________" if is_last else "Desk Officer Signature: ___________________________ Date: ____/____/2026"
-    meta_extra = f'<div>Sheet Total: <span style="border-bottom: 1.2px solid var(--border-dark); display:inline-block; min-width: 40px;">&nbsp;</span> / {end - start + 1}</div>' if not is_last else f'<div>Grand Total: <strong style="color:var(--emerald);">&nbsp;____ / 50</strong></div>'
+    meta_extra = f'<div>Sheet Total: <span style="border-bottom: 1.2px solid var(--border-dark); display:inline-block; min-width: 40px;">&nbsp;</span> / 10</div>' if not is_last else f'<div>Grand Total: <strong style="color:var(--emerald);">&nbsp;____ / 50</strong></div>'
     
     pages_html += f'''
   <!-- ==================== PAGE {page_num}: ROWS {start:02d} - {end:02d} ==================== -->
@@ -90,20 +91,18 @@ for page_num, start, end in pages_data:
           <div>Target Area / Region: <span class="meta-line" style="min-width: 120px;">&nbsp;Nairobi & Environs</span></div>
           <div>Date: <span class="meta-line" style="min-width: 80px;">&nbsp;____/____/2026</span></div>
           {meta_extra}
-          <div>Page: <strong>Sheet {page_num} of 4</strong></div>
+          <div>Page: <strong>Sheet {page_num} of 5</strong></div>
         </div>
 
         <table class="roster-table">
           <thead>
             <tr>
-              <th style="width: 28px; text-align: center;">#</th>
-              <th style="width: 23%;">Madrasa / Institution Official Name<span class="sub-note">اسم المدرسة / المركز القرآني</span></th>
-              <th style="width: 14%;">County & Area / Estate<span class="sub-note">المحافظة / الحي (e.g. Eastleigh)</span></th>
-              <th style="width: 16%;">Headteacher / Mudir<span class="sub-note">اسم المدير / المشرف</span></th>
-              <th style="width: 15%;">Mobile & WhatsApp No.<span class="sub-note">الهاتف والواتساب (+254)</span></th>
-              <th style="width: 19%;">Official Email (Portal Login)<span class="sub-note">البريد الإلكتروني لحساب المنصة</span></th>
-              <th style="width: 8%; text-align: center;">Students<span class="sub-note">الطلاب</span></th>
-              <th style="width: 5%; text-align: center;">Entered<span class="sub-note">[✓]</span></th>
+              <th style="width: 32px; text-align: center;">#</th>
+              <th style="width: 26%;">Madrasa / Institution Official Name<span class="sub-note">اسم المدرسة / المركز القرآني</span></th>
+              <th style="width: 19%;">County & Sub-County / Area<span class="sub-note">المحافظة والمنطقة / الحي (e.g. Nairobi, Eastleigh)</span></th>
+              <th style="width: 18%;">Headteacher / Mudir<span class="sub-note">اسم المدير / المشرف</span></th>
+              <th style="width: 16%;">Mobile & WhatsApp No.<span class="sub-note">الهاتف والواتساب (+254)</span></th>
+              <th style="width: 21%;">Official Email (Portal Login)<span class="sub-note">البريد الإلكتروني لحساب المنصة</span></th>
             </tr>
           </thead>
           <tbody>
@@ -114,7 +113,7 @@ for page_num, start, end in pages_data:
         <div class="footer-note">
           <span>* All verified entries are transferred directly to <strong>musabaqa-admin</strong> database for institution onboarding and portal access.</span>
           <span>{footer_extra}</span>
-          <span>Musabaqa 2026 • 50-Madaris Master Intake • Sheet {page_num} of 4</span>
+          <span>Musabaqa 2026 • 50-Madaris Master Intake • Sheet {page_num} of 5</span>
         </div>
       </div>
     </div>
@@ -304,14 +303,14 @@ html_large = f'''<!DOCTYPE html>
     .roster-table {{
       width: 100%;
       border-collapse: collapse;
-      font-size: 9.5px;
+      font-size: 10px;
     }}
 
     .roster-table th {{
       background: var(--emerald);
       color: #ffffff;
       border: 1px solid #14532d;
-      padding: 4.5px 5px;
+      padding: 4.5px 6px;
       text-align: left;
       font-weight: 800;
       text-transform: uppercase;
@@ -321,26 +320,17 @@ html_large = f'''<!DOCTYPE html>
 
     .roster-table td {{
       border: 1px solid var(--border-line);
-      padding: 2px 5px;
+      padding: 3px 6px;
       vertical-align: middle;
-      height: 9.6mm;
+      height: 13.5mm;
     }}
 
     .col-num {{
       text-align: center;
       font-weight: 800;
-      font-size: 11.5px;
+      font-size: 12px;
       color: #0f172a;
       font-family: 'Plus Jakarta Sans', sans-serif;
-    }}
-
-    .check-box {{
-      width: 13px;
-      height: 13px;
-      border: 1.5px solid var(--border-dark);
-      border-radius: 2.5px;
-      display: inline-block;
-      background: #ffffff;
     }}
 
     .sub-note {{
@@ -372,7 +362,7 @@ html_large = f'''<!DOCTYPE html>
 with open('/home/khalfan/Desktop/roster_50_rows_landscape.html', 'w', encoding='utf-8') as f:
     f.write(html_large)
 
-print('Generated updated 4-page HTML with large visible fonts!')
+print('Generated updated 5-page HTML (10 rows/sheet, 13.5mm row height, 6 spacious columns)!')
 
 cmd_pdf = [
     'chromium', '--headless', '--disable-gpu', '--no-sandbox',
@@ -381,4 +371,3 @@ cmd_pdf = [
 ]
 subprocess.run(cmd_pdf, check=True)
 print('Recompiled PDF: /home/khalfan/Desktop/Madrasa_50_Rows_Intake_Roster_A4.pdf')
-

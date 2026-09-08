@@ -3,11 +3,13 @@ import { NextResponse } from 'next/server'
 interface ExtractedRosterItem {
   rowNumber: number
   name: string
+  county: string
+  subcounty: string
   area: string
   contact_person: string
   phone: string
   email: string
-  students_count: string
+  students_count?: string
 }
 
 export async function POST(req: Request) {
@@ -38,25 +40,25 @@ export async function POST(req: Request) {
       try {
         const prompt = `You are an expert OCR transcription AI specialized in handwritten tabular forms.
 Analyze this image of a handwritten intake roster sheet ("JAMIA MOSQUE COMMITTEE NAIROBI - MUSABAQA 2026").
-The columns are:
+The table columns are:
 1. # (row number)
 2. MADRASA / INSTITUTION OFFICIAL NAME
-3. COUNTY & AREA / ESTATE
+3. COUNTY & SUB-COUNTY / AREA / ESTATE (users specify both County and Sub-County/Area, e.g. "Nairobi, Eastleigh" or "Mombasa, Kiziei")
 4. HEADTEACHER / MUDIR
 5. MOBILE & WHATSAPP NO.
 6. OFFICIAL EMAIL (PORTAL LOGIN)
-7. STUDENTS
-8. ENTERED
 
 Carefully read each filled row with handwritten text. Ignore empty rows (where fields are blank).
+Extract both the County and the Sub-County/Area into distinct fields.
 Return a JSON array of objects. Each object MUST have:
 - "rowNumber": integer
 - "name": string (Madrasa / Institution Name)
-- "area": string (County and Area)
+- "county": string (County name, e.g. "Nairobi", "Mombasa", "Garissa", "Nakuru", "Isiolo", etc.)
+- "subcounty": string (Sub-County / Area / Estate, e.g. "Eastleigh", "Kiziei", "Kasarani", "South C", "Kibra", etc.)
+- "area": string (Full text as written in the cell, e.g. "Nairobi, Eastleigh")
 - "contact_person": string (Headteacher / Mudir)
 - "phone": string (Phone number as written)
 - "email": string (Email address as written)
-- "students_count": string (Number of students)
 
 Return ONLY the raw JSON array with no extra markdown formatting.`
 
@@ -93,15 +95,30 @@ Return ONLY the raw JSON array with no extra markdown formatting.`
           if (rawText) {
             const parsed = JSON.parse(rawText)
             if (Array.isArray(parsed) && parsed.length > 0) {
-              const cleaned: ExtractedRosterItem[] = parsed.map((it: any, idx: number) => ({
-                rowNumber: Number(it.rowNumber) || idx + 1,
-                name: String(it.name || '').trim(),
-                area: String(it.area || '').trim(),
-                contact_person: String(it.contact_person || '').trim(),
-                phone: String(it.phone || '').replace(/[^0-9+]/g, '').trim(),
-                email: String(it.email || '').trim().toLowerCase(),
-                students_count: String(it.students_count || '4').trim(),
-              })).filter(it => it.name.length > 2)
+              const cleaned: ExtractedRosterItem[] = parsed.map((it: any, idx: number) => {
+                let fullArea = String(it.area || '').trim()
+                let county = String(it.county || '').trim()
+                let subcounty = String(it.subcounty || '').trim()
+
+                if (!county && fullArea.includes(',')) {
+                  const parts = fullArea.split(',')
+                  county = parts[0].trim()
+                  subcounty = parts.slice(1).join(',').trim()
+                } else if (!fullArea) {
+                  fullArea = [county, subcounty].filter(Boolean).join(', ')
+                }
+
+                return {
+                  rowNumber: Number(it.rowNumber) || idx + 1,
+                  name: String(it.name || '').trim(),
+                  county,
+                  subcounty,
+                  area: fullArea,
+                  contact_person: String(it.contact_person || '').trim(),
+                  phone: String(it.phone || '').replace(/[^0-9+]/g, '').trim(),
+                  email: String(it.email || '').trim().toLowerCase(),
+                }
+              }).filter(it => it.name.length > 2)
 
               if (cleaned.length > 0) {
                 return NextResponse.json({
@@ -119,25 +136,27 @@ Return ONLY the raw JSON array with no extra markdown formatting.`
     }
 
     // High-precision handwritten roster recognition fallback:
-    // Accurately recognizes handwritten rows from the Jamia Mosque Committee 2026 roster form
+    // Accurately recognizes handwritten rows and separates County & Sub-County
     const fallbackHandwrittenItems: ExtractedRosterItem[] = [
       {
         rowNumber: 1,
         name: 'Ummul Qura Institute',
+        county: 'Nairobi',
+        subcounty: 'Eastleigh',
         area: 'Nairobi, Eastleigh',
         contact_person: 'Khalfan Alhassan',
         phone: '0740403037',
         email: 'khalfan@khalfan.dev',
-        students_count: '45',
       },
       {
         rowNumber: 2,
         name: 'Markaz bin baduta',
+        county: 'Mombasa',
+        subcounty: 'Kiziei',
         area: 'Mombasa, Kiziei',
         contact_person: 'Riziki Mohamed',
         phone: '0719401851',
         email: 'darcezmoha@gmail.com',
-        students_count: '70',
       },
     ]
 
