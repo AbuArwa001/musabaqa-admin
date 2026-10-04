@@ -41,15 +41,55 @@ export default function LiveClient({ students, rounds, initialEvents = [], dict,
   const studentMap = useMemo(() => Object.fromEntries(students.map(s => [s.id, s.full_name])), [students])
 
   useEffect(() => {
-    let ws: WebSocket
-    let reconnectTimer: NodeJS.Timeout
+    let ws: WebSocket | null = null
+    let reconnectTimer: NodeJS.Timeout | null = null
+    let pingInterval: NodeJS.Timeout | null = null
+    let isCleanedUp = false
+    let reconnectDelay = 1000
 
     const connect = () => {
-      ws = new WebSocket(getAdminWsUrl(token))
-      ws.onopen = () => setWsConnected(true)
+      if (isCleanedUp) return
+
+      if (ws) {
+        ws.onopen = null
+        ws.onclose = null
+        ws.onerror = null
+        ws.onmessage = null
+        try { ws.close() } catch {}
+      }
+      if (pingInterval) clearInterval(pingInterval)
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+
+      try {
+        ws = new WebSocket(getAdminWsUrl(token))
+      } catch (err) {
+        setWsConnected(false)
+        reconnectTimer = setTimeout(connect, reconnectDelay)
+        reconnectDelay = Math.min(reconnectDelay * 1.5, 5000)
+        return
+      }
+
+      ws.onopen = () => {
+        if (isCleanedUp) {
+          try { ws?.close() } catch {}
+          return
+        }
+        setWsConnected(true)
+        reconnectDelay = 1000
+
+        pingInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send(JSON.stringify({ type: 'ping' }))
+            } catch {}
+          }
+        }, 15000)
+      }
+
       ws.onmessage = (event) => {
         try {
           const raw = JSON.parse(event.data)
+          if (raw.type === 'pong') return
           let parsedEvent: LiveEvent | null = null
 
           if (raw.type === 'SCORE_UPDATED') {
@@ -78,16 +118,42 @@ export default function LiveClient({ students, rounds, initialEvents = [], dict,
           }
         } catch (e) {}
       }
-      ws.onclose = () => {
+
+      ws.onclose = (event) => {
         setWsConnected(false)
-        reconnectTimer = setTimeout(connect, 3000)
+        if (pingInterval) clearInterval(pingInterval)
+        if (isCleanedUp || event.code === 4001) return
+
+        reconnectTimer = setTimeout(connect, reconnectDelay)
+        reconnectDelay = Math.min(reconnectDelay * 1.5, 5000)
       }
+
+      ws.onerror = () => {}
     }
 
     connect()
+
+    const handleNetworkOrVisibility = () => {
+      if (document.visibilityState === 'visible' && (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING)) {
+        connect()
+      }
+    }
+    window.addEventListener('online', handleNetworkOrVisibility)
+    document.addEventListener('visibilitychange', handleNetworkOrVisibility)
+
     return () => {
-      clearTimeout(reconnectTimer)
-      if (ws) ws.close()
+      isCleanedUp = true
+      window.removeEventListener('online', handleNetworkOrVisibility)
+      document.removeEventListener('visibilitychange', handleNetworkOrVisibility)
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+      if (pingInterval) clearInterval(pingInterval)
+      if (ws) {
+        ws.onopen = null
+        ws.onclose = null
+        ws.onerror = null
+        ws.onmessage = null
+        try { ws.close() } catch {}
+      }
     }
   }, [token])
 

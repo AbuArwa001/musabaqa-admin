@@ -158,42 +158,146 @@ export default function ScoringClient({
     loadStudentData(activeStudentId)
   }, [activeStudentId, round.id, token])
 
-  // WebSocket Live Sync
+  const activeStudentIdRef = useRef(activeStudentId)
   useEffect(() => {
-    const ws = new WebSocket(getAdminWsUrl(token))
-    ws.onopen = () => setWsConnected(true)
-    ws.onclose = () => setWsConnected(false)
-    ws.onmessage = (event) => {
+    activeStudentIdRef.current = activeStudentId
+  }, [activeStudentId])
+
+  const loadStudentDataRef = useRef(loadStudentData)
+  useEffect(() => {
+    loadStudentDataRef.current = loadStudentData
+  }, [loadStudentData])
+
+  // WebSocket Live Sync with Auto-Reconnect & Heartbeat Keepalive
+  useEffect(() => {
+    let ws: WebSocket | null = null
+    let pingInterval: NodeJS.Timeout | null = null
+    let reconnectTimer: NodeJS.Timeout | null = null
+    let isCleanedUp = false
+    let reconnectDelay = 1000
+
+    const connect = () => {
+      if (isCleanedUp) return
+
+      if (ws) {
+        ws.onopen = null
+        ws.onclose = null
+        ws.onerror = null
+        ws.onmessage = null
+        try { ws.close() } catch {}
+      }
+      if (pingInterval) clearInterval(pingInterval)
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+
       try {
-        const data = JSON.parse(event.data)
-        if (data.type === 'ACTIVE_STUDENT_CHANGED' && data.round_id === round.id) {
-          setLiveQueuedStudentId(data.student_id)
-          if (!isModerator || data.student_id) {
-            setActiveStudentId(data.student_id)
-          }
-        } else if (data.type === 'SCORE_UPDATED' && data.round_id === round.id) {
-          if (activeStudentId !== null && activeStudentId === data.student_id) {
-            getMyScore(token, round.id, activeStudentId).then(setMyScore).catch(() => {})
-          }
-        } else if (data.type === 'RUBRIC_MODE_CHANGED') {
-          if (data.rubric_mode) {
-            setRubricMode(data.rubric_mode)
-            const cfg = getCompetitionConfig()
-            saveCompetitionConfig({ ...cfg, rubric_mode: data.rubric_mode })
-            getRoundDeductionTypes(token, round.id)
-              .then(res => {
-                if (res.deduction_types?.length) setActiveDeductionTypes(res.deduction_types)
-              })
-              .catch(() => {})
-          }
-          if (activeStudentId !== null) {
-            loadStudentData(activeStudentId)
-          }
+        ws = new WebSocket(getAdminWsUrl(token))
+      } catch (err) {
+        setWsConnected(false)
+        reconnectTimer = setTimeout(connect, reconnectDelay)
+        reconnectDelay = Math.min(reconnectDelay * 1.5, 5000)
+        return
+      }
+
+      ws.onopen = () => {
+        if (isCleanedUp) {
+          try { ws?.close() } catch {}
+          return
         }
-      } catch (e) {}
+        setWsConnected(true)
+        reconnectDelay = 1000 // reset backoff on successful connect
+
+        // Send a heartbeat ping every 15 seconds to prevent proxy / NAT / Cloudflare idle timeouts
+        pingInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send(JSON.stringify({ type: 'ping' }))
+            } catch {}
+          }
+        }, 15000)
+
+        // Resync current student state in case events were missed while disconnected
+        const currentActive = activeStudentIdRef.current
+        if (currentActive !== null && currentActive !== undefined) {
+          loadStudentDataRef.current(currentActive)
+        }
+      }
+
+      ws.onclose = (event) => {
+        setWsConnected(false)
+        if (pingInterval) clearInterval(pingInterval)
+
+        // Don't auto-reconnect if intentionally unmounted or auth expired (code 4001)
+        if (isCleanedUp || event.code === 4001) return
+
+        reconnectTimer = setTimeout(connect, reconnectDelay)
+        reconnectDelay = Math.min(reconnectDelay * 1.5, 5000)
+      }
+
+      ws.onerror = () => {
+        // Will trigger onclose and attempt reconnect
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'pong') return
+
+          if (data.type === 'ACTIVE_STUDENT_CHANGED' && data.round_id === round.id) {
+            setLiveQueuedStudentId(data.student_id)
+            if (!isModerator || data.student_id) {
+              setActiveStudentId(data.student_id)
+            }
+          } else if (data.type === 'SCORE_UPDATED' && data.round_id === round.id) {
+            const currentActive = activeStudentIdRef.current
+            if (currentActive !== null && currentActive === data.student_id) {
+              getMyScore(token, round.id, currentActive).then(setMyScore).catch(() => {})
+            }
+          } else if (data.type === 'RUBRIC_MODE_CHANGED') {
+            if (data.rubric_mode) {
+              setRubricMode(data.rubric_mode)
+              const cfg = getCompetitionConfig()
+              saveCompetitionConfig({ ...cfg, rubric_mode: data.rubric_mode })
+              getRoundDeductionTypes(token, round.id)
+                .then(res => {
+                  if (res.deduction_types?.length) setActiveDeductionTypes(res.deduction_types)
+                })
+                .catch(() => {})
+            }
+            const currentActive = activeStudentIdRef.current
+            if (currentActive !== null && currentActive !== undefined) {
+              loadStudentDataRef.current(currentActive)
+            }
+          }
+        } catch (e) {}
+      }
     }
-    return () => ws.close()
-  }, [token, round.id, isModerator, activeStudentId])
+
+    connect()
+
+    // Immediate reconnect when window regains network or tab becomes visible again
+    const handleNetworkOrVisibility = () => {
+      if (document.visibilityState === 'visible' && (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING)) {
+        connect()
+      }
+    }
+    window.addEventListener('online', handleNetworkOrVisibility)
+    document.addEventListener('visibilitychange', handleNetworkOrVisibility)
+
+    return () => {
+      isCleanedUp = true
+      window.removeEventListener('online', handleNetworkOrVisibility)
+      document.removeEventListener('visibilitychange', handleNetworkOrVisibility)
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+      if (pingInterval) clearInterval(pingInterval)
+      if (ws) {
+        ws.onopen = null
+        ws.onclose = null
+        ws.onerror = null
+        ws.onmessage = null
+        try { ws.close() } catch {}
+      }
+    }
+  }, [token, round.id, isModerator])
 
 
   const handleSetLive = async () => {
